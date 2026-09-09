@@ -1,0 +1,322 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Page
+    x:Class="WSLCC.App.Pages.HomePage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:vm="using:WSLCC.App.ViewModels"
+    mc:Ignorable="d"
+    x:DataType="vm:HomeViewModel">
+
+    <ScrollViewer>
+        <Grid Padding="32,24,32,32" RowSpacing="16">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel Spacing="2">
+                    <TextBlock Style="{StaticResource TitleTextBlockStyle}" Text="WSLC 仪表盘" />
+                    <TextBlock
+                        Style="{StaticResource CaptionTextBlockStyle}"
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                        Text="{x:Bind ViewModel.TodayText, Mode=OneWay}" />
+                </StackPanel>
+                <StackPanel
+                    Grid.Column="1"
+                    Orientation="Horizontal"
+                    Spacing="8"
+                    VerticalAlignment="Center">
+                    <Button
+                        Command="{x:Bind ViewModel.RefreshCommand}"
+                        Content="刷新" />
+                </StackPanel>
+            </Grid>
+
+            <InfoBar
+                Grid.Row="1"
+                IsClosable="True"
+                IsOpen="{x:Bind ViewModel.HasError, Mode=OneWay}"
+                Message="{x:Bind ViewModel.ErrorMessage, Mode=OneWay}"
+                Severity="Error"
+                Title="操作失败" />
+
+            <Grid Grid.Row="2" ColumnSpacing="16">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <Border
+                    Padding="16"
+                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    CornerRadius="8">
+                    <StackPanel Spacing="4">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <FontIcon
+                                FontSize="12"
+                                Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
+                                Glyph="&#xE160;" />
+                            <TextBlock
+                                Style="{StaticResource CaptionTextBlockStyle}"
+                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                Text="活动会话" />
+                        </StackPanel>
+                        <TextBlock
+                            FontSize="30"
+                            FontWeight="SemiBold"
+                            Text="{x:Bind ViewModel.ActiveSessions, Mode=OneWay}" />
+                    </StackPanel>
+                </Border>
+
+                <Border
+                    Grid.Column="1"
+                    Padding="16"
+                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    CornerRadius="8">
+                    <StackPanel Spacing="4">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <FontIcon
+                                FontSize="12"
+                                Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
+Glyph="&#xEB9F;" />
+                            <TextBlock
+                                Style="{StaticResource CaptionTextBlockStyle}"
+                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                Text="本地镜像" />
+                        </StackPanel>
+                        <TextBlock
+                            FontSize="30"
+                            FontWeight="SemiBold"
+                            Text="{x:Bind ViewModel.ImagesCount, Mode=OneWay}" />
+                    </StackPanel>
+                </Border>
+
+                <Border
+                    Grid.Column="2"
+                    Padding="16"
+                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    CornerRadius="8">
+                    <StackPanel Spacing="4">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <FontIcon
+                                FontSize="12"
+                                Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
+                                Glyph="&#xE7F4;" />
+                            <TextBlock
+                                Style="{StaticResource CaptionTextBlockStyle}"
+                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                Text="容器数量" />
+                            <TextBlock
+                                VerticalAlignment="Center"
+                                Style="{StaticResource CaptionTextBlockStyle}"
+                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                Text="{x:Bind ViewModel.ContainerDetailText, Mode=OneWay}" />
+                        </StackPanel>
+                        <TextBlock
+                            FontSize="30"
+                            FontWeight="SemiBold"
+                            Text="{x:Bind ViewModel.ContainersCount, Mode=OneWay}" />
+                    </StackPanel>
+                </Border>
+
+                <Border
+                    Grid.Column="3"
+                    Padding="16"
+                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    CornerRadius="8">
+                    <StackPanel Spacing="4">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <FontIcon
+                                FontSize="12"
+                                Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
+                                Glyph="&#xE81C;" />
+                            <TextBlock
+                                Style="{StaticResource CaptionTextBlockStyle}"
+                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                Text="审计记录" />
+                        </StackPanel>
+                        <TextBlock
+                            FontSize="30"
+                            FontWeight="SemiBold"
+                            Text="{x:Bind ViewModel.AuditCount, Mode=OneWay}" />
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <Grid Grid.Row="3" ColumnSpacing="16">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <Border
+                    Padding="16"
+                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    CornerRadius="8">
+                    <StackPanel Spacing="10">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <FontIcon
+                                FontSize="13"
+                                Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
+                                Glyph="&#xE930;" />
+                            <TextBlock Style="{StaticResource SubtitleTextBlockStyle}" Text="环境与运行状态" />
+                        </StackPanel>
+                        <Grid ColumnSpacing="10" RowSpacing="8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="96" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+
+                            <TextBlock Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="wslc 版本" />
+                            <TextBlock Grid.Column="1" Style="{StaticResource BodyTextBlockStyle}" TextTrimming="CharacterEllipsis" Text="{x:Bind ViewModel.WslcVersion, Mode=OneWay}" />
+
+                            <TextBlock Grid.Row="1" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="Linux 内核" />
+                            <TextBlock Grid.Row="1" Grid.Column="1" Style="{StaticResource BodyTextBlockStyle}" TextTrimming="CharacterEllipsis" Text="{x:Bind ViewModel.KernelVersion, Mode=OneWay}" />
+
+                            <TextBlock Grid.Row="2" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="Windows" />
+                            <TextBlock Grid.Row="2" Grid.Column="1" Style="{StaticResource BodyTextBlockStyle}" TextTrimming="CharacterEllipsis" Text="{x:Bind ViewModel.WindowsVersion, Mode=OneWay}" />
+
+                            <TextBlock Grid.Row="3" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="会话管理器" />
+                            <TextBlock Grid.Row="3" Grid.Column="1" Style="{StaticResource BodyTextBlockStyle}" TextTrimming="CharacterEllipsis" Text="{x:Bind ViewModel.SessionManagerVersion, Mode=OneWay}" />
+
+                            <TextBlock Grid.Row="4" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="缺失组件" />
+                            <TextBlock Grid.Row="4" Grid.Column="1" Style="{StaticResource BodyTextBlockStyle}" TextTrimming="CharacterEllipsis" Text="{x:Bind ViewModel.MissingComponents, Mode=OneWay}" />
+
+                            <TextBlock Grid.Row="5" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="原生 API" />
+                            <TextBlock Grid.Row="5" Grid.Column="1" Style="{StaticResource BodyTextBlockStyle}" TextTrimming="CharacterEllipsis" Text="{x:Bind ViewModel.ApiStatus, Mode=OneWay}" />
+
+                            <TextBlock Grid.Row="6" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="数据库" />
+                            <TextBlock Grid.Row="6" Grid.Column="1" Style="{StaticResource CaptionTextBlockStyle}" IsTextSelectionEnabled="True" TextTrimming="CharacterEllipsis" Text="{x:Bind ViewModel.DatabasePath, Mode=OneWay}" />
+
+                            <TextBlock Grid.Row="7" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="配置" />
+                            <TextBlock Grid.Row="7" Grid.Column="1" Style="{StaticResource CaptionTextBlockStyle}" IsTextSelectionEnabled="True" TextTrimming="CharacterEllipsis" Text="{x:Bind ViewModel.SettingsFile, Mode=OneWay}" />
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <Border
+                    Grid.Column="1"
+                    Padding="16"
+                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    CornerRadius="8">
+                    <StackPanel Spacing="10">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <FontIcon
+                                FontSize="13"
+                                Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
+                                Glyph="&#xE7F3;" />
+                            <TextBlock Style="{StaticResource SubtitleTextBlockStyle}" Text="资源配额" />
+                        </StackPanel>
+                        <Grid ColumnSpacing="10" RowSpacing="8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="80" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+
+                            <TextBlock Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="CPU" />
+                            <TextBlock Grid.Column="1" TextWrapping="Wrap" Text="{x:Bind ViewModel.QuotaCpu, Mode=OneWay}" />
+
+                            <TextBlock Grid.Row="1" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="内存" />
+                            <TextBlock Grid.Row="1" Grid.Column="1" TextWrapping="Wrap" Text="{x:Bind ViewModel.QuotaMemory, Mode=OneWay}" />
+
+                            <TextBlock Grid.Row="2" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="存储上限" />
+                            <TextBlock Grid.Row="2" Grid.Column="1" TextWrapping="Wrap" Text="{x:Bind ViewModel.QuotaStorage, Mode=OneWay}" />
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <Border
+                    Grid.Column="2"
+                    Padding="16"
+                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    CornerRadius="8">
+                    <StackPanel Spacing="10">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <FontIcon
+                                    FontSize="13"
+                                    Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
+                                    Glyph="&#xE7F4;" />
+                                <TextBlock Style="{StaticResource SubtitleTextBlockStyle}" Text="活动会话" />
+                            </StackPanel>
+                            <StackPanel
+                                Grid.Column="1"
+                                Orientation="Horizontal"
+                                Spacing="4">
+                                <Button
+                                    Padding="8,3"
+                                    Click="TerminateSessions_Click"
+                                    Content="终止" />
+                                <Button
+                                    Padding="8,3"
+                                    Click="RestartSessions_Click"
+                                    Content="重启" />
+                            </StackPanel>
+                        </Grid>
+                        <ListView
+                            MinHeight="90"
+                            ItemsSource="{x:Bind ViewModel.SessionList, Mode=OneWay}">
+                            <ListView.ItemTemplate>
+                                <DataTemplate x:DataType="x:String">
+                                    <StackPanel Orientation="Horizontal" Spacing="8" Padding="0,2">
+                                        <FontIcon
+                                            FontSize="11"
+                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                            Glyph="&#xE8B7;" />
+                                        <TextBlock Text="{x:Bind}" />
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ListView.ItemTemplate>
+                        </ListView>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Grid>
+    </ScrollViewer>
+</Page>
+

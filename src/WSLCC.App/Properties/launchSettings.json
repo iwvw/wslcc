@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "WSLCC.App (Package)": {
+      "commandName": "MsixPackage"
+    },
+    "WSLCC.App (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}

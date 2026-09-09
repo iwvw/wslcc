@@ -1,0 +1,7 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/WSLCC.App/WSLCC.App.csproj" />
+    <Project Path="src/WSLCC.Core/WSLCC.Core.csproj" />
+    <Project Path="src/WSLCC.Data/WSLCC.Data.csproj" />
+  </Folder>
+</Solution>

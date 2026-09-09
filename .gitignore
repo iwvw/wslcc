@@ -1,0 +1,26 @@
+## .NET
+bin/
+obj/
+**/bin/
+**/obj/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+## VS
+.vs/
+.vscode/
+.idea/
+
+## Build outputs
+artifacts/
+dist/
+publish/
+*.nupkg
+*.log
+
+## Runtime
+*.db
+*.db-wal
+*.db-shm

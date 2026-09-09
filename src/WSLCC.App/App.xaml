@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Application
+    x:Class="WSLCC_App.App"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:WSLCC_App"
+    xmlns:converters="using:WSLCC.App.Converters">
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
+                <!-- Other merged dictionaries here -->
+            </ResourceDictionary.MergedDictionaries>
+            <converters:BoolToHealthBrushConverter x:Key="BoolToHealthBrush" />
+            <converters:BoolToVisibilityConverter x:Key="BoolToVis" />
+            <converters:InverseBoolToVisibilityConverter x:Key="InverseBoolToVis" />
+            <DataTemplate x:Key="SkeletonCardTemplate">
+                <Border
+                    MinHeight="160"
+                    Padding="14,14"
+                    HorizontalAlignment="Stretch"
+                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    CornerRadius="6">
+                    <Grid RowSpacing="14">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Border
+                            Width="16"
+                            Height="16"
+                            CornerRadius="8"
+                            Background="{ThemeResource ControlFillColorSecondaryBrush}" />
+                        <Border
+                            Grid.Column="1"
+                            Height="14"
+                            CornerRadius="4"
+                            Background="{ThemeResource ControlFillColorSecondaryBrush}" />
+                        <Border
+                            Grid.Row="1"
+                            Grid.ColumnSpan="2"
+                            Width="240"
+                            HorizontalAlignment="Left"
+                            Height="12"
+                            CornerRadius="4"
+                            Background="{ThemeResource ControlFillColorSecondaryBrush}" />
+                        <Border
+                            Grid.Row="2"
+                            Grid.ColumnSpan="2"
+                            Width="180"
+                            HorizontalAlignment="Left"
+                            Height="12"
+                            CornerRadius="4"
+                            Background="{ThemeResource ControlFillColorSecondaryBrush}" />
+                        <Border
+                            Grid.Row="3"
+                            Grid.ColumnSpan="2"
+                            Width="220"
+                            HorizontalAlignment="Left"
+                            Height="12"
+                            CornerRadius="4"
+                            Background="{ThemeResource ControlFillColorSecondaryBrush}" />
+                        <Border
+                            Grid.Row="4"
+                            Grid.ColumnSpan="2"
+                            Height="26"
+                            CornerRadius="4"
+                            Background="{ThemeResource ControlFillColorSecondaryBrush}" />
+                    </Grid>
+                </Border>
+            </DataTemplate>
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>

@@ -1,0 +1,191 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Page
+    x:Class="WSLCC.App.Pages.SettingsPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:vm="using:WSLCC.App.ViewModels"
+    mc:Ignorable="d"
+    x:DataType="vm:SettingsViewModel">
+
+    <ScrollViewer>
+        <Grid Padding="32,24,32,24" RowSpacing="20">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock
+                    Style="{StaticResource TitleTextBlockStyle}"
+                    Text="设置"
+                    VerticalAlignment="Center" />
+                <Button
+                    Grid.Column="1"
+                    VerticalAlignment="Center"
+                    Command="{x:Bind ViewModel.LoadCommand}"
+                    Content="重新加载" />
+            </Grid>
+
+            <StackPanel Grid.Row="1" Spacing="16">
+                <InfoBar
+                    IsClosable="True"
+                    IsOpen="{x:Bind ViewModel.HasSaveMessage, Mode=OneWay}"
+                    Message="{x:Bind ViewModel.SaveMessage, Mode=OneWay}"
+                    Severity="Success"
+                    Title="提示" />
+                <InfoBar
+                    IsClosable="True"
+                    IsOpen="{x:Bind ViewModel.HasError, Mode=OneWay}"
+                    Message="{x:Bind ViewModel.ErrorMessage, Mode=OneWay}"
+                    Severity="Error"
+                    Title="操作失败" />
+
+                <Border
+                    Padding="20"
+                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    CornerRadius="8">
+                    <StackPanel Spacing="16">
+                        <TextBlock Style="{StaticResource SubtitleTextBlockStyle}" Text="会话配置" />
+                        <Grid ColumnSpacing="16" RowSpacing="12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="180" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+
+                            <TextBlock VerticalAlignment="Center" Text="会话名称" />
+                            <TextBox
+                                Grid.Column="1"
+                                PlaceholderText="如 wslcc-desktop"
+                                Text="{x:Bind ViewModel.SessionName, Mode=TwoWay}" />
+
+                            <TextBlock
+                                Grid.Row="1"
+                                VerticalAlignment="Center"
+                                Text="存储路径" />
+                            <TextBox
+                                Grid.Row="1"
+                                Grid.Column="1"
+                                PlaceholderText="如 %LOCALAPPDATA%\WslcData"
+                                Text="{x:Bind ViewModel.StoragePath, Mode=TwoWay}" />
+
+                            <TextBlock
+                                Grid.Row="2"
+                                VerticalAlignment="Center"
+                                Text="CPU 配额" />
+                            <TextBox
+                                Grid.Row="2"
+                                Grid.Column="1"
+                                PlaceholderText="留空使用默认"
+                                Text="{x:Bind ViewModel.CpuCount, Mode=TwoWay}" />
+
+                            <TextBlock
+                                Grid.Row="3"
+                                VerticalAlignment="Center"
+                                Text="内存配额 (MB)" />
+                            <TextBox
+                                Grid.Row="3"
+                                Grid.Column="1"
+                                PlaceholderText="留空使用默认"
+                                Text="{x:Bind ViewModel.MemoryMb, Mode=TwoWay}" />
+
+                            <TextBlock
+                                Grid.Row="4"
+                                VerticalAlignment="Center"
+                                Text="镜像加速源" />
+                            <TextBox
+                                Grid.Row="4"
+                                Grid.Column="1"
+                                PlaceholderText="如 docker.1panel.live"
+                                Text="{x:Bind ViewModel.RegistryMirror, Mode=TwoWay}" />
+
+                            <TextBlock
+                                Grid.Row="5"
+                                VerticalAlignment="Center"
+                                Text="Compose 目录" />
+                            <TextBox
+                                Grid.Row="5"
+                                Grid.Column="1"
+                                PlaceholderText="Compose 文件默认工作目录"
+                                Text="{x:Bind ViewModel.ComposeDirectory, Mode=TwoWay}" />
+                        </Grid>
+                        <Button
+                            HorizontalAlignment="Right"
+                            Command="{x:Bind ViewModel.SaveCommand}"
+                            Content="保存配置" />
+                    </StackPanel>
+                </Border>
+
+                <Border
+                    Padding="20"
+                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    CornerRadius="8">
+                    <StackPanel Spacing="16">
+                        <TextBlock Style="{StaticResource SubtitleTextBlockStyle}" Text="外观设置" />
+                        <StackPanel Spacing="12">
+                            <ToggleSwitch
+                                x:Name="MicaToggle"
+                                Header="背景效果（Mica）"
+                                IsOn="{x:Bind ViewModel.MicaEnabled, Mode=TwoWay}"
+                                OffContent="关闭（降低串流/低配环境渲染开销）"
+                                OnContent="开启"
+                                Toggled="MicaToggle_Toggled" />
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <Border
+                    Padding="20"
+                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    CornerRadius="8">
+                    <StackPanel Spacing="12">
+                        <TextBlock Style="{StaticResource SubtitleTextBlockStyle}" Text="本地数据库" />
+                        <Grid ColumnSpacing="24" RowSpacing="8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Spacing="4">
+                                <TextBlock Style="{StaticResource BodyStrongTextBlockStyle}" Text="数据库文件" />
+                                <TextBlock IsTextSelectionEnabled="True" Text="{x:Bind ViewModel.DatabasePath, Mode=OneWay}" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Spacing="4">
+                                <TextBlock Style="{StaticResource BodyStrongTextBlockStyle}" Text="审计记录" />
+                                <TextBlock Text="{x:Bind ViewModel.AuditCount, Mode=OneWay}" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="2" Spacing="4">
+                                <TextBlock Style="{StaticResource BodyStrongTextBlockStyle}" Text="拉取历史" />
+                                <TextBlock Text="{x:Bind ViewModel.PullCount, Mode=OneWay}" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="3" Spacing="4">
+                                <TextBlock Style="{StaticResource BodyStrongTextBlockStyle}" Text="容器快照" />
+                                <TextBlock Text="{x:Bind ViewModel.SnapshotCount, Mode=OneWay}" />
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </Grid>
+    </ScrollViewer>
+</Page>
