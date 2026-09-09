@@ -18,7 +18,7 @@
 ## 环境要求
 
 - Windows 10/11（x64）
-- [wslc](https://github.com/microsoft/wsl-containers)（微软 WSL 容器 CLI）
+- [WSL 容器（wslc）](https://github.com/MicrosoftDocs/wsl/blob/main/WSL/wsl-container.md)（微软官方 WSL 容器 CLI）
 - .NET 10 SDK（开发构建）
 
 ## 构建

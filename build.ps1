@@ -12,7 +12,7 @@ param(
 $ErrorActionPreference = "Stop"
 
 $project = Join-Path $PSScriptRoot "src\WSLCC.App\WSLCC.App.csproj"
-Write-Host "==> dotnet build WSLCC.App ($Configuration|$Platform)"
+Write-Host "==> dotnet build WSLCC ($Configuration|$Platform)"
 dotnet build $project -c $Configuration -p:Platform=$Platform -p:RuntimeIdentifier=win-$Platform -v:m
 
 if ($LASTEXITCODE -ne 0) {
@@ -20,8 +20,8 @@ if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE
 }
 
-$out = Join-Path $PSScriptRoot "src\WSLCC.App\bin\$Platform\$Configuration\net10.0-windows10.0.26100.0\win-$Platform\WSLCC.App.exe"
+$out = Join-Path $PSScriptRoot "src\WSLCC.App\bin\$Platform\$Configuration\net10.0-windows10.0.26100.0\win-$Platform\WSLCC.exe"
 if (-not (Test-Path $out)) {
-    $out = Join-Path $PSScriptRoot "src\WSLCC.App\bin\$Configuration\net10.0-windows10.0.26100.0\win-$Platform\WSLCC.App.exe"
+    $out = Join-Path $PSScriptRoot "src\WSLCC.App\bin\$Configuration\net10.0-windows10.0.26100.0\win-$Platform\WSLCC.exe"
 }
 Write-Host "构建成功。产物: $out" -ForegroundColor Green

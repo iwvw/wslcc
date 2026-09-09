@@ -3,14 +3,15 @@ param(
     [ValidateSet("Debug", "Release")]
     [string]$Configuration = "Release",
     [ValidateSet("win-x64", "win-arm64")]
-    [string]$Runtime = "win-x64"
+    [string]$Runtime = "win-x64",
+    [switch]$InnoSetup
 )
 
 $ErrorActionPreference = "Stop"
 
 $project = Join-Path $PSScriptRoot "src\WSLCC.App\WSLCC.App.csproj"
 $publishDir = Join-Path $PSScriptRoot "dist\publish"
-$exe = Join-Path $publishDir "WSLCC.App.exe"
+$exe = Join-Path $publishDir "WSLCC.exe"
 
 Write-Host "==> dotnet publish ($Configuration|$Runtime, self-contained)"
 dotnet publish $project -c $Configuration -r $Runtime --self-contained true -o $publishDir -v:m
@@ -27,3 +28,17 @@ $zip = Join-Path $PSScriptRoot "dist\WSLCC-$version-$Runtime.zip"
 if (Test-Path $zip) { Remove-Item $zip -Force }
 Compress-Archive -Path "$publishDir\*" -DestinationPath $zip -Force
 Write-Host "发布完成：$zip" -ForegroundColor Green
+
+if ($InnoSetup) {
+    $iscc = @(
+        "$env:LOCALAPPDATA\Programs\Inno Setup 6\ISCC.exe",
+        "C:\Program Files (x86)\Inno Setup 6\ISCC.exe",
+        "C:\Program Files\Inno Setup 6\ISCC.exe"
+    ) | Where-Object { Test-Path $_ } | Select-Object -First 1
+    if (-not $iscc) { throw "未找到 Inno Setup 编译器（ISCC.exe），请先安装 Inno Setup 6" }
+    $iss = Join-Path $PSScriptRoot "scripts\installer.iss"
+    $dist = Join-Path $PSScriptRoot "dist"
+    Write-Host "==> Inno Setup 安装器"
+    & $iscc "/DSourceDir=$publishDir" "/DAppVersion=$version" "/DOutputDir=$dist" $iss
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+}

@@ -29,13 +29,50 @@ jobs:
         shell: powershell
         run: Compress-Archive -Path artifacts/publish/* -DestinationPath artifacts/WSLCC-win-x64.zip -Force
 
-      - uses: actions/upload-artifact@v4
+      - name: Upload zip
+        uses: actions/upload-artifact@v4
         with:
-          name: wslcc-win-x64
+          name: wslcc-win-x64-zip
           path: artifacts/WSLCC-win-x64.zip
+          if-no-files-found: error
+
+      - name: Upload publish dir
+        uses: actions/upload-artifact@v4
+        with:
+          name: wslcc-win-x64-publish
+          path: artifacts/publish
+          if-no-files-found: error
+
+      - name: Create installer
+        shell: powershell
+        run: |
+          choco install innosetup -y --no-progress
+          $iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) { $iscc = "C:\Program Files\Inno Setup 6\ISCC.exe" }
+          $tag = "${{ github.ref_name }}"
+          $ver = if ($tag -like "v*") { $tag.Substring(1) } else { "0.1.0" }
+          & $iscc "/DSourceDir=$PWD\artifacts\publish" "/DAppVersion=$ver" "/DOutputDir=$PWD\artifacts" scripts\installer.iss
+          if ($LASTEXITCODE -ne 0) { throw "installer build failed" }
+
+      - name: Locate installer
+        shell: powershell
+        run: |
+          $setup = Get-ChildItem artifacts\WSLCC-Setup-*.exe | Select-Object -First 1
+          if (-not $setup) { throw "no installer produced" }
+          Copy-Item $setup.FullName artifacts\WSLCC-Setup.exe -Force
+          Write-Output "installer: $($setup.FullName)"
+
+      - name: Upload installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: wslcc-setup
+          path: artifacts/WSLCC-Setup.exe
+          if-no-files-found: error
 
       - name: Create GitHub Release
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: artifacts/WSLCC-win-x64.zip
+          files: |
+            artifacts/WSLCC-win-x64.zip
+            artifacts/WSLCC-Setup.exe
