@@ -1,6 +1,8 @@
 using System.Reflection;
+using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media.Imaging;
+using WSLCC.Core.Services;
 
 namespace WSLCC.App.Pages;
 
@@ -45,5 +47,29 @@ public sealed partial class AboutPage : Page
         {
             return "-";
         }
+    }
+
+    private async void CheckUpdate_Click(object sender, RoutedEventArgs e)
+    {
+        CheckUpdateButton.IsEnabled = false;
+        UpdateStatusText.Text = "检查中…";
+        var info = await WslcHost.Default.Update.CheckAsync();
+        if (info.Error is not null)
+        {
+            UpdateStatusText.Text = $"检查失败：{info.Error}";
+        }
+        else if (info.HasUpdate)
+        {
+            UpdateStatusText.Text = $"发现新版本 v{info.LatestVersion}，请到发布页下载";
+            if (info.ReleaseUrl is not null)
+                UpdateStatusText.Text = $"发现新版本 v{info.LatestVersion}，可前往发布页下载";
+        }
+        else
+        {
+            UpdateStatusText.Text = info.LatestVersion is null
+                ? "暂无发布版本信息"
+                : $"已是最新版本（v{info.LatestVersion}）";
+        }
+        CheckUpdateButton.IsEnabled = true;
     }
 }

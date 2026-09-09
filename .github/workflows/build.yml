@@ -1,0 +1,41 @@
+name: Build & Publish
+
+on:
+  push:
+    branches: [ main, dev ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ main, dev ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore & Build
+        run: dotnet build src/WSLCC.App/WSLCC.App.csproj -c Release -p:Platform=x64 -v:m
+
+      - name: Publish (self-contained)
+        run: dotnet publish src/WSLCC.App/WSLCC.App.csproj -c Release -r win-x64 --self-contained true -p:Platform=x64 -p:PublishTrimmed=false -p:PublishReadyToRun=false -o artifacts/publish -v:m
+
+      - name: Package zip
+        shell: powershell
+        run: Compress-Archive -Path artifacts/publish/* -DestinationPath artifacts/WSLCC-win-x64.zip -Force
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wslcc-win-x64
+          path: artifacts/WSLCC-win-x64.zip
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/WSLCC-win-x64.zip

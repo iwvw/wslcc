@@ -23,6 +23,7 @@ public sealed partial class MainWindow : Window
             presenter.PreferredMinimumHeight = 640;
         }
         _ = InitializeAppearanceAsync();
+        NavFrame.Navigate(typeof(HomePage));
     }
 
     public void ApplyBackdrop(bool enableMica)

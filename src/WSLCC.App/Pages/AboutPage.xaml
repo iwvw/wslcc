@@ -36,7 +36,7 @@
                             HorizontalAlignment="Center"
                             VerticalAlignment="Center"
                             Stretch="Uniform" />
-                        <StackPanel
+<StackPanel
                             Grid.Column="1"
                             VerticalAlignment="Center"
                             Spacing="2">
@@ -45,6 +45,20 @@
                                 x:Name="VersionText"
                                 Style="{StaticResource CaptionTextBlockStyle}"
                                 Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                            <StackPanel
+                                Margin="0,6,0,0"
+                                Orientation="Horizontal"
+                                Spacing="10">
+                                <Button
+                                    x:Name="CheckUpdateButton"
+                                    Click="CheckUpdate_Click"
+                                    Content="检查更新" />
+                                <TextBlock
+                                    x:Name="UpdateStatusText"
+                                    VerticalAlignment="Center"
+                                    Style="{StaticResource CaptionTextBlockStyle}"
+                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                            </StackPanel>
                         </StackPanel>
                     </Grid>
                     <Border
