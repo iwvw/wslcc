@@ -23,7 +23,7 @@ public sealed class WslcVolumeService : IWslcVolumeService
 
     public async Task<IReadOnlyList<VolumeItem>> ListAsync(CancellationToken ct = default)
     {
-        var lines = await _runner.RunJsonLinesAsync("volume list --format json", ct).ConfigureAwait(false);
+        var lines = await _runner.RunJsonLinesAsync(["volume", "list", "--format", "json"], ct).ConfigureAwait(false);
         return lines.Select(Parse).ToList();
     }
 
@@ -32,13 +32,27 @@ public sealed class WslcVolumeService : IWslcVolumeService
         var started = DateTimeOffset.Now;
         try
         {
-            await _runner.RunAsync($"volume rm {Quote(name)}", ct: ct).ConfigureAwait(false);
-            await _audit.RecordAsync("volume", "delete", name, true, durationMs: (long)(DateTimeOffset.Now - started).TotalMilliseconds).ConfigureAwait(false);
+            await _runner.RunAsync(["volume", "rm", name], ct: ct).ConfigureAwait(false);
+            await SafeRecordAsync(() => _audit.RecordAsync("volume", "delete", name, true, durationMs: ElapsedMs(started))).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
-            await _audit.RecordAsync("volume", "delete", name, false, ex.Message, (long)(DateTimeOffset.Now - started).TotalMilliseconds).ConfigureAwait(false);
+            if (ex is not OperationCanceledException)
+            {
+                await SafeRecordAsync(() => _audit.RecordAsync("volume", "delete", name, false, ex.Message, ElapsedMs(started))).ConfigureAwait(false);
+            }
             throw;
+        }
+    }
+
+    private static async Task SafeRecordAsync(Func<Task> record)
+    {
+        try
+        {
+            await record().ConfigureAwait(false);
+        }
+        catch
+        {
         }
     }
 
@@ -61,6 +75,6 @@ public sealed class WslcVolumeService : IWslcVolumeService
         return null;
     }
 
-    private static string Quote(string value)
-        => value.Contains(' ') ? $"\"{value.Replace("\"", "\\\"")}\"" : value;
+    private static long ElapsedMs(DateTimeOffset started)
+        => (long)(DateTimeOffset.Now - started).TotalMilliseconds;
 }

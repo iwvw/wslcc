@@ -48,11 +48,10 @@
             <TextBox
                 Width="360"
                 PlaceholderText="镜像名称，如 nginx:latest"
-                Text="{x:Bind ViewModel.PullImageText, Mode=TwoWay}" />
+                Text="{x:Bind ViewModel.PullImageText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
             <Button
                 VerticalAlignment="Stretch"
                 Command="{x:Bind ViewModel.PullCommand}"
-                CommandParameter="{x:Bind ViewModel.PullImageText, Mode=OneWay}"
                 Content="拉取" />
             <TextBlock
                 VerticalAlignment="Center"

@@ -11,7 +11,8 @@
 
     <ScrollViewer>
         <Grid Padding="32,24,32,32" RowSpacing="16">
-            <Grid.RowDefinitions>
+<Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
@@ -41,7 +42,7 @@
                 </StackPanel>
             </Grid>
 
-            <InfoBar
+<InfoBar
                 Grid.Row="1"
                 IsClosable="True"
                 IsOpen="{x:Bind ViewModel.HasError, Mode=OneWay}"
@@ -49,7 +50,41 @@
                 Severity="Error"
                 Title="操作失败" />
 
-            <Grid Grid.Row="2" ColumnSpacing="16">
+            <Border
+                Grid.Row="2"
+                Padding="16"
+                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                BorderThickness="1"
+                CornerRadius="8"
+                Visibility="{x:Bind ViewModel.HasGuidance, Mode=OneWay, Converter={StaticResource BoolToVis}}">
+                <StackPanel Spacing="10">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <FontIcon
+                            FontSize="13"
+                            Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
+                            Glyph="&#xE946;" />
+                        <TextBlock Style="{StaticResource SubtitleTextBlockStyle}" Text="排查指导" />
+                    </StackPanel>
+                    <ItemsControl ItemsSource="{x:Bind ViewModel.GuidanceSteps, Mode=OneWay}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="x:String">
+                                <StackPanel
+                                    Margin="0,2"
+                                    Orientation="Horizontal"
+                                    Spacing="8">
+                                    <TextBlock
+                                        Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
+                                        Text="›" />
+                                    <TextBlock MaxWidth="640" TextWrapping="Wrap" Text="{x:Bind}" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
+            <Grid Grid.Row="3" ColumnSpacing="16">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="*" />
@@ -162,7 +197,7 @@ Glyph="&#xEB9F;" />
                 </Border>
             </Grid>
 
-            <Grid Grid.Row="3" ColumnSpacing="16">
+<Grid Grid.Row="4" ColumnSpacing="16">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="*" />

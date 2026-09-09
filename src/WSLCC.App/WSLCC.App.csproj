@@ -2,7 +2,7 @@
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <AssemblyName>WSLCC</AssemblyName>
-    <Version>0.1.0</Version>
+    <Version>1.0.0</Version>
     <ApplicationIcon>Assets\AppIcon.ico</ApplicationIcon>
     <TargetFramework>net10.0-windows10.0.26100.0</TargetFramework>
     <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
@@ -35,6 +35,10 @@
     <Content Include="Assets\Avatars\iwvw.png" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="Assets\Avatars\lemonno2333.png" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="Assets\Wide310x150Logo.scale-200.png" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.WindowsDesktop.App.WindowsForms" />
   </ItemGroup>
 
   <ItemGroup>
@@ -85,3 +89,4 @@
     <PublishTrimmed Condition="'$(Configuration)' != 'Debug'">True</PublishTrimmed>
   </PropertyGroup>
 </Project>
+

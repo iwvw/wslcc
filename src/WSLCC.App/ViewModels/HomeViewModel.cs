@@ -38,12 +38,6 @@ public partial class HomeViewModel : ObservableObject
     public partial string ApiStatus { get; set; }
 
     [ObservableProperty]
-    public partial string HealthText { get; set; }
-
-    [ObservableProperty]
-    public partial bool IsHealthy { get; set; }
-
-    [ObservableProperty]
     public partial string ImagesCount { get; set; }
 
     [ObservableProperty]
@@ -87,6 +81,11 @@ public partial class HomeViewModel : ObservableObject
 
     public ObservableCollection<string> SessionList { get; } = new();
 
+    [ObservableProperty]
+    public partial bool HasGuidance { get; set; }
+
+    public ObservableCollection<string> GuidanceSteps { get; } = new();
+
     public string ContainerDetailText
         => $"{RunningContainersCount} 运行 · {StoppedContainersCount} 停止";
 
@@ -107,8 +106,6 @@ public partial class HomeViewModel : ObservableObject
         ActiveSessions = "-";
         MissingComponents = "未知";
         ApiStatus = "-";
-        HealthText = "检测中";
-        IsHealthy = false;
         ImagesCount = "-";
         ContainersCount = "-";
         RunningContainersCount = "-";
@@ -129,9 +126,16 @@ public partial class HomeViewModel : ObservableObject
     {
         IsLoading = true;
         HasError = false;
+        HasGuidance = false;
         try
         {
             var info = await _host.Environment.GetEnvironmentAsync();
+            if (info.Client is null && info.Server is null)
+            {
+                ErrorMessage = "未获取到 wslc 环境信息，可能会话未启动或 wslc 未安装。";
+                HasError = true;
+                BuildGuidance(ErrorMessage);
+            }
             if (info.Client is { } client)
             {
                 WslcVersion = client.Version;
@@ -151,8 +155,6 @@ public partial class HomeViewModel : ObservableObject
             var componentsOk = info.MissingComponents.Count == 0;
             MissingComponents = componentsOk ? "组件齐全" : string.Join(", ", info.MissingComponents);
             ApiStatus = info.ApiAvailable ? "可用（原生 API）" : "不可用（当前使用 CLI 通道）";
-            IsHealthy = componentsOk;
-            HealthText = componentsOk ? "运行正常" : "需要关注：缺失组件";
 
             DatabasePath = _host.Database.DatabasePath;
             AuditCount = (await _host.Audit.CountAsync()).ToString();
@@ -169,11 +171,48 @@ public partial class HomeViewModel : ObservableObject
         {
             ErrorMessage = ex.Message;
             HasError = true;
+            BuildGuidance(ex.Message);
         }
         finally
         {
             IsLoading = false;
         }
+    }
+
+    private void BuildGuidance(string message)
+    {
+        GuidanceSteps.Clear();
+        var text = message ?? "";
+        var missingWslc = text.Contains("无法识别的命令", StringComparison.OrdinalIgnoreCase)
+            || text.Contains("not recognized", StringComparison.OrdinalIgnoreCase)
+            || text.Contains("not found", StringComparison.OrdinalIgnoreCase);
+        var sessionIssue = text.Contains("会话", StringComparison.OrdinalIgnoreCase)
+            || text.Contains("session", StringComparison.OrdinalIgnoreCase)
+            || text.Contains("VM", StringComparison.OrdinalIgnoreCase)
+            || text.Contains("TUN", StringComparison.OrdinalIgnoreCase)
+            || text.Contains("虚拟网卡", StringComparison.OrdinalIgnoreCase);
+        var networkIssue = text.Contains("网络", StringComparison.OrdinalIgnoreCase)
+            || text.Contains("超时", StringComparison.OrdinalIgnoreCase)
+            || text.Contains("timeout", StringComparison.OrdinalIgnoreCase)
+            || text.Contains("拒绝", StringComparison.OrdinalIgnoreCase)
+            || text.Contains("refused", StringComparison.OrdinalIgnoreCase);
+
+        GuidanceSteps.Add(missingWslc
+            ? "未检测到 wslc 命令：请先安装微软 WSL 容器 CLI（WSL 容器文档中可查看安装方式）"
+            : "确认 wslc 已安装并在 PATH 中，命令行执行 wslc --version 验证");
+
+        GuidanceSteps.Add("启动会话：执行 wslc session start；若之前执行过 wsl --shutdown，需要重新启动 WSL");
+
+        GuidanceSteps.Add(sessionIssue
+            ? "会话反复启动失败时，检查是否开启了代理软件的 TUN 模式（如 mihomo/Clash），关闭 TUN 后重试"
+            : "若反复失败，检查是否有代理软件占用虚拟网卡（TUN 模式），关闭后重试");
+
+        if (networkIssue)
+            GuidanceSteps.Add("网络异常时检查镜像加速配置：设置页面确认使用可用镜像源（如 docker.1panel.live）");
+
+        GuidanceSteps.Add("完成上述检查后，点击右上角“刷新”重试，或重启应用");
+
+        HasGuidance = true;
     }
 
     public async Task TerminateSessionsAsync()

@@ -29,7 +29,7 @@ public sealed class WslcImageService : IWslcImageService
 
     public async Task<IReadOnlyList<ImageItem>> ListAsync(CancellationToken ct = default)
     {
-        var lines = await _runner.RunJsonLinesAsync("image ls --format json", ct).ConfigureAwait(false);
+        var lines = await _runner.RunJsonLinesAsync(["image", "ls", "--format", "json"], ct).ConfigureAwait(false);
         return lines.Select(Parse).ToList();
     }
 
@@ -38,14 +38,23 @@ public sealed class WslcImageService : IWslcImageService
         var started = DateTimeOffset.Now;
         try
         {
-            await _runner.RunStreamingAsync($"pull {Quote(imageRef)}", progress, ct).ConfigureAwait(false);
-            await _audit.RecordAsync("image", "pull", imageRef, true, durationMs: ElapsedMs(started)).ConfigureAwait(false);
-            await _history.RecordPullAsync(imageRef, true, null, started, DateTimeOffset.Now).ConfigureAwait(false);
+            await _runner.RunStreamingAsync(["pull", imageRef], null, progress, ct).ConfigureAwait(false);
+            await SafeRecordAsync(async () =>
+            {
+                await _audit.RecordAsync("image", "pull", imageRef, true, durationMs: ElapsedMs(started)).ConfigureAwait(false);
+                await _history.RecordPullAsync(imageRef, true, null, started, DateTimeOffset.Now).ConfigureAwait(false);
+            }).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
-            await _audit.RecordAsync("image", "pull", imageRef, false, ex.Message, ElapsedMs(started)).ConfigureAwait(false);
-            await _history.RecordPullAsync(imageRef, false, ex.Message, started, DateTimeOffset.Now).ConfigureAwait(false);
+            if (ex is not OperationCanceledException)
+            {
+                await SafeRecordAsync(async () =>
+                {
+                    await _audit.RecordAsync("image", "pull", imageRef, false, ex.Message, ElapsedMs(started)).ConfigureAwait(false);
+                    await _history.RecordPullAsync(imageRef, false, ex.Message, started, DateTimeOffset.Now).ConfigureAwait(false);
+                }).ConfigureAwait(false);
+            }
             throw;
         }
     }
@@ -55,13 +64,27 @@ public sealed class WslcImageService : IWslcImageService
         var started = DateTimeOffset.Now;
         try
         {
-            await _runner.RunAsync($"rmi {Quote(imageRef)}", ct: ct).ConfigureAwait(false);
-            await _audit.RecordAsync("image", "delete", imageRef, true, durationMs: ElapsedMs(started)).ConfigureAwait(false);
+            await _runner.RunAsync(["rmi", imageRef], ct: ct).ConfigureAwait(false);
+            await SafeRecordAsync(() => _audit.RecordAsync("image", "delete", imageRef, true, durationMs: ElapsedMs(started))).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
-            await _audit.RecordAsync("image", "delete", imageRef, false, ex.Message, ElapsedMs(started)).ConfigureAwait(false);
+            if (ex is not OperationCanceledException)
+            {
+                await SafeRecordAsync(() => _audit.RecordAsync("image", "delete", imageRef, false, ex.Message, ElapsedMs(started))).ConfigureAwait(false);
+            }
             throw;
+        }
+    }
+
+    private static async Task SafeRecordAsync(Func<Task> record)
+    {
+        try
+        {
+            await record().ConfigureAwait(false);
+        }
+        catch
+        {
         }
     }
 
@@ -89,7 +112,4 @@ public sealed class WslcImageService : IWslcImageService
 
     private static long ElapsedMs(DateTimeOffset started)
         => (long)(DateTimeOffset.Now - started).TotalMilliseconds;
-
-    private static string Quote(string value)
-        => value.Contains(' ') ? $"\"{value.Replace("\"", "\\\"")}\"" : value;
 }

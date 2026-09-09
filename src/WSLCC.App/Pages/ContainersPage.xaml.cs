@@ -12,21 +12,25 @@ public sealed partial class ContainersPage : Page
 {
     public ContainersViewModel ViewModel { get; }
 
+    private bool _isActive;
+
     public ContainersPage()
     {
         InitializeComponent();
         ViewModel = new ContainersViewModel(
-            WslcHost.Default.Containers, WslcHost.Default.Compose, WslcHost.Default.Settings)
-        {
-            InspectProvider = ShowInspectDialogAsync,
-        };
+            WslcHost.Default.Containers, WslcHost.Default.Compose, WslcHost.Default.Settings);
         DataContext = ViewModel;
         Loaded += async (_, _) =>
         {
+            _isActive = true;
             await ViewModel.LoadAsync();
-            ViewModel.StartAutoRefresh();
+            if (_isActive) ViewModel.StartAutoRefresh();
         };
-        Unloaded += (_, _) => ViewModel.StopAutoRefresh();
+        Unloaded += (_, _) =>
+        {
+            _isActive = false;
+            ViewModel.StopAutoRefresh();
+        };
     }
 
     private async void NewContainer_Click(object sender, RoutedEventArgs e)
@@ -118,8 +122,18 @@ public sealed partial class ContainersPage : Page
         };
         var showTask = dialog.ShowAsync();
         var progress = new Progress<string>(line => statusText.Text = line);
-        var summary = await run(progress);
-        statusText.Text = summary;
+        try
+        {
+            statusText.Text = await run(progress);
+        }
+        catch (OperationCanceledException)
+        {
+            statusText.Text = "已取消";
+        }
+        catch (Exception ex)
+        {
+            statusText.Text = $"操作失败：{ex.Message}";
+        }
         await showTask;
     }
 
@@ -184,14 +198,16 @@ public sealed partial class ContainersPage : Page
         {
             Process.Start(new ProcessStartInfo("wt.exe", $"-- wslc exec -it {target} /bin/sh") { UseShellExecute = false });
         }
-        catch
+        catch (Exception ex)
         {
+            global::WSLCC_App.App.WriteLog($"Windows Terminal 启动失败：{ex}");
             try
             {
                 Process.Start(new ProcessStartInfo("cmd.exe", $"/c start wslc exec -it {target} /bin/sh") { UseShellExecute = false });
             }
-            catch
+            catch (Exception fallbackEx)
             {
+                global::WSLCC_App.App.WriteLog($"cmd 终端启动失败：{fallbackEx}");
             }
         }
     }

@@ -33,6 +33,10 @@ public sealed class WslcDatabase
         Directory.CreateDirectory(Path.GetDirectoryName(DatabasePath)!);
         await ExecuteWriteAsync(async conn =>
         {
+            await using var wal = conn.CreateCommand();
+            wal.CommandText = "PRAGMA journal_mode=WAL;";
+            await wal.ExecuteNonQueryAsync().ConfigureAwait(false);
+
             await using var cmd = conn.CreateCommand();
             cmd.CommandText = """
                 CREATE TABLE IF NOT EXISTS app_settings (
@@ -88,9 +92,9 @@ public sealed class WslcDatabase
                 CREATE INDEX IF NOT EXISTS idx_compose_project ON compose_deployment(project_name);
                 """;
             await cmd.ExecuteNonQueryAsync();
-            await AddComposeFilePathColumnIfMissingAsync(conn);
+            await AddComposeFilePathColumnIfMissingAsync(conn).ConfigureAwait(false);
             return 0;
-        });
+        }).ConfigureAwait(false);
     }
 
     private static async Task AddComposeFilePathColumnIfMissingAsync(SqliteConnection conn)
@@ -111,20 +115,20 @@ public sealed class WslcDatabase
     public async Task<SqliteConnection> OpenAsync()
     {
         var conn = new SqliteConnection(_connectionString);
-        await conn.OpenAsync();
+        await conn.OpenAsync().ConfigureAwait(false);
         await using var pragma = conn.CreateCommand();
-        pragma.CommandText = "PRAGMA journal_mode=WAL;";
-        await pragma.ExecuteNonQueryAsync();
+        pragma.CommandText = "PRAGMA busy_timeout=5000;";
+        await pragma.ExecuteNonQueryAsync().ConfigureAwait(false);
         return conn;
     }
 
     public async Task<T> ExecuteWriteAsync<T>(Func<SqliteConnection, Task<T>> action)
     {
-        await _writeLock.WaitAsync();
+        await _writeLock.WaitAsync().ConfigureAwait(false);
         try
         {
-            await using var conn = await OpenAsync();
-            return await action(conn);
+            await using var conn = await OpenAsync().ConfigureAwait(false);
+            return await action(conn).ConfigureAwait(false);
         }
         finally
         {
@@ -134,7 +138,7 @@ public sealed class WslcDatabase
 
     public async Task<T> ExecuteReadAsync<T>(Func<SqliteConnection, Task<T>> action)
     {
-        await using var conn = await OpenAsync();
-        return await action(conn);
+        await using var conn = await OpenAsync().ConfigureAwait(false);
+        return await action(conn).ConfigureAwait(false);
     }
 }

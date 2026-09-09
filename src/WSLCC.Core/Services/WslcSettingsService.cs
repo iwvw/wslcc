@@ -16,6 +16,14 @@ public interface IWslcSettingsService
     Task SetThemeAsync(string theme);
     Task<string> GetComposeDirectoryAsync();
     Task SetComposeDirectoryAsync(string directory);
+    Task<string> GetCloseBehaviorAsync();
+    Task SetCloseBehaviorAsync(string behavior);
+    Task<bool> GetStartupContainersEnabledAsync();
+    Task SetStartupContainersEnabledAsync(bool enabled);
+    Task<bool> GetAutoCheckUpdateEnabledAsync();
+    Task SetAutoCheckUpdateEnabledAsync(bool enabled);
+    Task<bool> GetMinimizeNotifyEnabledAsync();
+    Task SetMinimizeNotifyEnabledAsync(bool enabled);
     Task<Dictionary<string, string>> GetAllAsync();
 }
 
@@ -29,6 +37,10 @@ public sealed class WslcSettingsService : IWslcSettingsService
     private const string KeyMica = "ui.mica";
     private const string KeyTheme = "ui.theme";
     private const string KeyComposeDir = "compose.defaultDir";
+    private const string KeyCloseBehavior = "app.closeBehavior";
+    private const string KeyStartupContainers = "app.startupContainers";
+    private const string KeyAutoCheckUpdate = "app.autoCheckUpdate";
+    private const string KeyMinimizeNotify = "app.minimizeTrayNotify";
 
     public const string DefaultRegistryMirror = "docker.1panel.live";
 
@@ -46,12 +58,13 @@ public sealed class WslcSettingsService : IWslcSettingsService
             all.TryGetValue(KeyMem, out var m) ? m : string.Empty);
     }
 
-    public Task SetSessionConfigAsync(SessionConfig config)
-        => Task.WhenAll(
-            _repository.SetAsync(KeyName, config.Name),
-            _repository.SetAsync(KeyPath, config.StoragePath),
-            _repository.SetAsync(KeyCpu, config.CpuCount),
-            _repository.SetAsync(KeyMem, config.MemoryMb));
+    public async Task SetSessionConfigAsync(SessionConfig config)
+    {
+        await _repository.SetAsync(KeyName, config.Name);
+        await _repository.SetAsync(KeyPath, config.StoragePath);
+        await _repository.SetAsync(KeyCpu, config.CpuCount);
+        await _repository.SetAsync(KeyMem, config.MemoryMb);
+    }
 
     public async Task<string> GetRegistryMirrorAsync()
         => await _repository.GetAsync(KeyMirror) ?? DefaultRegistryMirror;
@@ -76,6 +89,30 @@ public sealed class WslcSettingsService : IWslcSettingsService
 
     public Task SetComposeDirectoryAsync(string directory)
         => _repository.SetAsync(KeyComposeDir, directory.Trim());
+
+    public async Task<string> GetCloseBehaviorAsync()
+        => await _repository.GetAsync(KeyCloseBehavior) ?? "ask";
+
+    public Task SetCloseBehaviorAsync(string behavior)
+        => _repository.SetAsync(KeyCloseBehavior, behavior is "tray" or "exit" ? behavior : "ask");
+
+    public async Task<bool> GetStartupContainersEnabledAsync()
+        => (await _repository.GetAsync(KeyStartupContainers)) == "1";
+
+    public Task SetStartupContainersEnabledAsync(bool enabled)
+        => _repository.SetAsync(KeyStartupContainers, enabled ? "1" : "0");
+
+    public async Task<bool> GetAutoCheckUpdateEnabledAsync()
+        => (await _repository.GetAsync(KeyAutoCheckUpdate)) != "0";
+
+    public Task SetAutoCheckUpdateEnabledAsync(bool enabled)
+        => _repository.SetAsync(KeyAutoCheckUpdate, enabled ? "1" : "0");
+
+    public async Task<bool> GetMinimizeNotifyEnabledAsync()
+        => (await _repository.GetAsync(KeyMinimizeNotify)) != "0";
+
+    public Task SetMinimizeNotifyEnabledAsync(bool enabled)
+        => _repository.SetAsync(KeyMinimizeNotify, enabled ? "1" : "0");
 
     public Task<Dictionary<string, string>> GetAllAsync() => _repository.GetAllAsync();
 }

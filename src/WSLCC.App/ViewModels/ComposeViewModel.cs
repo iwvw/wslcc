@@ -21,6 +21,10 @@ public sealed partial class ComposeProjectItemViewModel : ObservableObject
 
     public bool HasMissing => Source.Services.Any(s => s.IsMissing);
 
+    public bool IsAllStopped => Source.RunningCount == 0;
+
+    public string PrimaryActionText => IsAllStopped ? "启动项目" : "停止项目";
+
     public string ServicesText => string.Join(Environment.NewLine,
         Source.Services.Select(s => $"{s.ContainerName}  [{s.State}]  {s.Status}"));
 }
@@ -79,6 +83,10 @@ public partial class ComposeViewModel : ObservableObject
 
     public Task<string> GetRegistryMirrorAsync() => _settings.GetRegistryMirrorAsync();
 
+    public Task<string> GetComposeDirectoryAsync() => _settings.GetComposeDirectoryAsync();
+
+    public Task SetComposeDirectoryAsync(string directory) => _settings.SetComposeDirectoryAsync(directory);
+
     public async Task<IReadOnlyList<ComposeDeploymentResult>> DeployFromContentAsync(
         string content, string? composeFilePath, string? overrideProjectName = null, IProgress<string>? progress = null, string? registryMirror = null)
     {
@@ -122,6 +130,21 @@ public partial class ComposeViewModel : ObservableObject
         catch
         {
             return false;
+        }
+    }
+
+    public async Task<IReadOnlyList<string>> StartProjectAsync(string projectName, IProgress<string>? progress = null)
+    {
+        try
+        {
+            var started = await _compose.StartProjectAsync(projectName, progress);
+            await LoadAsync();
+            return started;
+        }
+        catch (Exception ex)
+        {
+            ShowError(ex);
+            return Array.Empty<string>();
         }
     }
 

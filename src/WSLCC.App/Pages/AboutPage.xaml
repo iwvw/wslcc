@@ -59,6 +59,23 @@
                                     Style="{StaticResource CaptionTextBlockStyle}"
                                     Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                             </StackPanel>
+                            <InfoBar
+                                x:Name="UpdateBar"
+                                Margin="0,10,0,0"
+                                IsClosable="False"
+                                IsOpen="False"
+                                Severity="Informational"
+                                Title="发现新版本">
+                                <StackPanel Orientation="Horizontal" Spacing="12">
+                                    <HyperlinkButton
+                                        x:Name="ReleaseLink"
+                                        Content="前往发布页查看详情" />
+                                    <Button
+                                        x:Name="DownloadUpdateBtn"
+                                        Click="DownloadUpdate_Click"
+                                        Content="下载并更新" />
+                                </StackPanel>
+                            </InfoBar>
                         </StackPanel>
                     </Grid>
                     <Border

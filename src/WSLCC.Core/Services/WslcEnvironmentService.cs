@@ -22,7 +22,7 @@ public sealed class WslcEnvironmentService : IWslcEnvironmentService
         var server = default(WslcServerInfo);
         try
         {
-            var json = await _runner.RunAsync("info --format json", ct: ct).ConfigureAwait(false);
+            var json = await _runner.RunAsync(["info", "--format", "json"], ct: ct).ConfigureAwait(false);
             using var doc = JsonDocument.Parse(json);
             var root = doc.RootElement;
             if (root.TryGetProperty("Client", out var clientEl))

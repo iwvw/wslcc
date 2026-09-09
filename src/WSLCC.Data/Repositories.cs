@@ -183,9 +183,11 @@ public sealed class ContainerSnapshotRepository
     public async Task AddRangeAsync(IEnumerable<ContainerSnapshotEntry> entries)
         => await _db.ExecuteWriteAsync(async conn =>
         {
+            await using var tx = (SqliteTransaction)await conn.BeginTransactionAsync();
             foreach (var entry in entries)
             {
                 await using var cmd = conn.CreateCommand();
+                cmd.Transaction = tx;
                 cmd.CommandText = """
                     INSERT INTO container_snapshot (name, image, state, status, ports, observed_at)
                     VALUES ($n, $i, $s, $st, $p, $t);
@@ -198,6 +200,14 @@ public sealed class ContainerSnapshotRepository
                 cmd.Parameters.AddWithValue("$t", entry.ObservedAt.ToString("O"));
                 await cmd.ExecuteNonQueryAsync();
             }
+
+            await using var cleanup = conn.CreateCommand();
+            cleanup.Transaction = tx;
+            cleanup.CommandText = "DELETE FROM container_snapshot WHERE observed_at < $cutoff;";
+            cleanup.Parameters.AddWithValue("$cutoff", DateTimeOffset.Now.AddDays(-30).ToString("O"));
+            await cleanup.ExecuteNonQueryAsync();
+
+            await tx.CommitAsync();
             return 0;
         });
 
@@ -234,61 +244,6 @@ public sealed class ContainerSnapshotRepository
         });
 }
 
-public sealed class SessionStateRepository
-{
-    private readonly WslcDatabase _db;
-
-    public SessionStateRepository(WslcDatabase db) => _db = db;
-
-    public async Task UpsertAsync(SessionStateEntry entry)
-        => await _db.ExecuteWriteAsync(async conn =>
-        {
-            await using var cmd = conn.CreateCommand();
-            cmd.CommandText = """
-                INSERT INTO session_state (name, storage_path, cpu_count, memory_mb, created_at, last_started_at, last_terminated_at)
-                VALUES ($n, $p, $c, $m, $ct, $st, $tt)
-                ON CONFLICT(name) DO UPDATE SET
-                    storage_path = excluded.storage_path,
-                    cpu_count = excluded.cpu_count,
-                    memory_mb = excluded.memory_mb,
-                    last_started_at = excluded.last_started_at,
-                    last_terminated_at = excluded.last_terminated_at;
-                """;
-            cmd.Parameters.AddWithValue("$n", entry.Name);
-            cmd.Parameters.AddWithValue("$p", entry.StoragePath);
-            cmd.Parameters.AddWithValue("$c", (object?)entry.CpuCount ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("$m", (object?)entry.MemoryMb ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("$ct", entry.CreatedAt?.ToString("O") ?? (object)DBNull.Value);
-            cmd.Parameters.AddWithValue("$st", entry.LastStartedAt?.ToString("O") ?? (object)DBNull.Value);
-            cmd.Parameters.AddWithValue("$tt", entry.LastTerminatedAt?.ToString("O") ?? (object)DBNull.Value);
-            await cmd.ExecuteNonQueryAsync();
-            return 0;
-        });
-
-    public async Task<IReadOnlyList<SessionStateEntry>> GetAllAsync()
-        => await _db.ExecuteReadAsync(async conn =>
-        {
-            var list = new List<SessionStateEntry>();
-            await using var cmd = conn.CreateCommand();
-            cmd.CommandText = """
-                SELECT name, storage_path, cpu_count, memory_mb, created_at, last_started_at, last_terminated_at
-                FROM session_state ORDER BY name;
-                """;
-            await using var reader = await cmd.ExecuteReaderAsync();
-            while (await reader.ReadAsync())
-            {
-                list.Add(new SessionStateEntry(
-                    reader.GetString(0),
-                    reader.GetString(1),
-                    reader.IsDBNull(2) ? null : reader.GetInt32(2),
-                    reader.IsDBNull(3) ? null : reader.GetInt32(3),
-                    reader.IsDBNull(4) ? null : DateTimeOffset.Parse(reader.GetString(4)),
-                    reader.IsDBNull(5) ? null : DateTimeOffset.Parse(reader.GetString(5)),
-                    reader.IsDBNull(6) ? null : DateTimeOffset.Parse(reader.GetString(6))));
-            }
-            return list;
-        });
-}
 public sealed record ComposeDeploymentEntry(long Id, string ProjectName, string ServiceName, string ContainerName, string? ComposeFilePath, DateTimeOffset DeployedAt);
 
 public sealed class ComposeDeploymentRepository
@@ -300,7 +255,16 @@ public sealed class ComposeDeploymentRepository
     public async Task AddAsync(string projectName, string serviceName, string containerName, string? composeFilePath)
         => await _db.ExecuteWriteAsync(async conn =>
         {
+            await using var tx = (SqliteTransaction)await conn.BeginTransactionAsync();
+
+            await using var del = conn.CreateCommand();
+            del.Transaction = tx;
+            del.CommandText = "DELETE FROM compose_deployment WHERE container_name = $c;";
+            del.Parameters.AddWithValue("$c", containerName);
+            await del.ExecuteNonQueryAsync();
+
             await using var cmd = conn.CreateCommand();
+            cmd.Transaction = tx;
             cmd.CommandText = """
                 INSERT INTO compose_deployment (project_name, service_name, container_name, compose_file_path, deployed_at)
                 VALUES ($p, $s, $c, $f, $t);
@@ -311,6 +275,8 @@ public sealed class ComposeDeploymentRepository
             cmd.Parameters.AddWithValue("$f", (object?)composeFilePath ?? DBNull.Value);
             cmd.Parameters.AddWithValue("$t", DateTimeOffset.Now.ToString("O"));
             await cmd.ExecuteNonQueryAsync();
+
+            await tx.CommitAsync();
             return 0;
         });
 

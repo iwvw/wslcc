@@ -66,6 +66,7 @@
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
                             </Grid.RowDefinitions>
 
                             <TextBlock VerticalAlignment="Center" Text="会话名称" />
@@ -123,11 +124,56 @@
                                 Grid.Column="1"
                                 PlaceholderText="Compose 文件默认工作目录"
                                 Text="{x:Bind ViewModel.ComposeDirectory, Mode=TwoWay}" />
+
+                            <TextBlock
+                                Grid.Row="6"
+                                VerticalAlignment="Center"
+                                Text="关闭行为" />
+                            <ComboBox
+                                Grid.Row="6"
+                                Grid.Column="1"
+                                MinWidth="240"
+                                HorizontalAlignment="Left"
+                                DisplayMemberPath="Label"
+                                ItemsSource="{x:Bind ViewModel.CloseBehaviorOptions, Mode=OneWay}"
+                                SelectedValue="{x:Bind ViewModel.CloseBehavior, Mode=TwoWay}"
+                                SelectedValuePath="Value" />
                         </Grid>
                         <Button
                             HorizontalAlignment="Right"
                             Command="{x:Bind ViewModel.SaveCommand}"
                             Content="保存配置" />
+                    </StackPanel>
+                </Border>
+
+                <Border
+                    Padding="20"
+                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    CornerRadius="8">
+                    <StackPanel Spacing="12">
+                        <TextBlock Style="{StaticResource SubtitleTextBlockStyle}" Text="启动与自启" />
+                        <ToggleSwitch
+                            Header="开机自动启动 WSLCC"
+                            IsOn="{x:Bind ViewModel.StartupEnabled, Mode=TwoWay}"
+                            OffContent="默认关闭"
+                            OnContent="随系统启动" />
+                        <ToggleSwitch
+                            Header="启动软件时自动拉起容器"
+                            IsOn="{x:Bind ViewModel.StartupContainersEnabled, Mode=TwoWay}"
+                            OffContent="默认关闭（不自动启动容器）"
+                            OnContent="自动启动上次仍在运行的容器" />
+                        <ToggleSwitch
+                            Header="启动时自动检查更新"
+                            IsOn="{x:Bind ViewModel.AutoCheckUpdate, Mode=TwoWay}"
+                            OffContent="默认开启（发现新版本会在关于页提示）"
+                            OnContent="启动后后台检查 GitHub 发布" />
+                        <ToggleSwitch
+                            Header="最小化到托盘时显示通知"
+                            IsOn="{x:Bind ViewModel.MinimizeTrayNotify, Mode=TwoWay}"
+                            OffContent="默认开启（弹托盘气泡提示）"
+                            OnContent="最小化时提示“已最小化到系统托盘”" />
                     </StackPanel>
                 </Border>
 
@@ -148,6 +194,54 @@
                                 OnContent="开启"
                                 Toggled="MicaToggle_Toggled" />
                         </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <Border
+                    Padding="20"
+                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    CornerRadius="8">
+                    <StackPanel Spacing="12">
+                        <TextBlock Style="{StaticResource SubtitleTextBlockStyle}" Text="wslc 管理" />
+                        <Grid ColumnSpacing="24" RowSpacing="8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Spacing="4">
+                                <TextBlock Style="{StaticResource BodyStrongTextBlockStyle}" Text="当前 wslc 版本" />
+                                <TextBlock Text="{x:Bind ViewModel.WslcCurrentVersion, Mode=OneWay}" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Spacing="4">
+                                <TextBlock Style="{StaticResource BodyStrongTextBlockStyle}" Text="最新 WSL 版本" />
+                                <TextBlock Text="{x:Bind ViewModel.WslcLatestVersion, Mode=OneWay}" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="2" Spacing="4">
+                                <TextBlock Style="{StaticResource BodyStrongTextBlockStyle}" Text="操作" />
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <Button
+                                        Command="{x:Bind ViewModel.CheckWslcCommand}"
+                                        Content="检查更新" />
+                                    <Button
+                                        Command="{x:Bind ViewModel.InstallWslcCommand}"
+                                        Content="{x:Bind ViewModel.WslcActionText, Mode=OneWay}" />
+                                </StackPanel>
+                            </StackPanel>
+                        </Grid>
+                        <TextBlock
+                            IsTextSelectionEnabled="True"
+                            TextWrapping="Wrap"
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                            Text="{x:Bind ViewModel.WslcActionMessage, Mode=OneWay}" />
+                        <TextBlock
+                            IsTextSelectionEnabled="True"
+                            TextWrapping="Wrap"
+                            Style="{StaticResource CaptionTextBlockStyle}"
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                            Text="提示：升级/安装 wslc 会通过 winget 安装或更新 WSL，需要管理员权限，请在弹窗中允许。" />
                     </StackPanel>
                 </Border>
 

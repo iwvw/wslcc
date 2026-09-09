@@ -35,6 +35,10 @@ public sealed class WslcHost
 
     public IWslcUpdateService Update { get; }
 
+    public IWslcInstallService Install { get; }
+
+    public IWslcStartupService Startup { get; }
+
     public const string SessionName = "wslcc-desktop";
 
     public static string DefaultStoragePath
@@ -64,6 +68,8 @@ public sealed class WslcHost
         Compose = new WslcComposeService(Containers, Audit, composeDeployments);
         Volumes = new WslcVolumeService(Runner, Audit);
         Update = new WslcUpdateService();
+        Install = new WslcInstallService(Runner);
+        Startup = new WslcStartupService();
     }
 
     public async Task InitializeAsync()

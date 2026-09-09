@@ -25,12 +25,3 @@ public sealed record ContainerSnapshotEntry(
     string? Status,
     string? Ports,
     DateTimeOffset ObservedAt);
-
-public sealed record SessionStateEntry(
-    string Name,
-    string StoragePath,
-    int? CpuCount,
-    int? MemoryMb,
-    DateTimeOffset? CreatedAt,
-    DateTimeOffset? LastStartedAt,
-    DateTimeOffset? LastTerminatedAt);

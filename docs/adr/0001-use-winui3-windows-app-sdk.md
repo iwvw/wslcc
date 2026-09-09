@@ -19,4 +19,4 @@
 ## 后果
 
 - 正面：视觉与交互符合 Windows 11 规范，开发效率高，官方持续维护。
-- 负面：仅支持 Windows 平台（符合产品定位）；XAML 编译器在非英文系统 + dotnet build 存在已知 bug（见 ADR-0007），需用 VS MSBuild 构建。
+- 负面：仅支持 Windows 平台（符合产品定位）；XAML 编译器在中文系统 + dotnet build 存在已知 bug（见 ADR-0007），中文本机直接构建需规避。

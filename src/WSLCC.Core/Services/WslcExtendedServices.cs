@@ -21,7 +21,8 @@ public sealed class WslcLogService : IWslcLogService
 
     private async Task<string> GetCleanLogsAsync(string nameOrId, CancellationToken ct)
     {
-        var raw = await _runner.RunAsync($"logs {CliQuote.Quote(nameOrId)}", ct: ct).ConfigureAwait(false);
+        var raw = await _runner.RunAsync(
+            ["logs", nameOrId], new WslcRunner.RunOptions(CheckOutputForErrors: false), ct).ConfigureAwait(false);
         return AnsiText.Strip(raw);
     }
 }
@@ -38,7 +39,7 @@ public sealed class WslcInspectService : IWslcInspectService
     public WslcInspectService(WslcRunner runner) => _runner = runner;
 
     public Task<string> InspectContainerAsync(string nameOrId, CancellationToken ct = default)
-        => _runner.RunAsync($"inspect {CliQuote.Quote(nameOrId)}", ct: ct);
+        => _runner.RunAsync(["inspect", nameOrId], ct: ct);
 }
 
 public interface IWslcSystemService
@@ -56,22 +57,23 @@ public sealed class WslcSystemService : IWslcSystemService
 
     public async Task<IReadOnlyList<WslcSessionInfo>> ListSessionsAsync(CancellationToken ct = default)
     {
-        var output = await _runner.RunAsync("system session list", ct: ct).ConfigureAwait(false);
+        var output = await _runner.RunAsync(["system", "session", "list"], ct: ct).ConfigureAwait(false);
         var sessions = new List<WslcSessionInfo>();
         foreach (var line in output.Split('\n'))
         {
             var parts = line.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
-            if (parts.Length < 3) continue;
+            if (parts.Length < 2) continue;
             if (!uint.TryParse(parts[0], out var id)) continue;
             uint? pid = null;
-            if (uint.TryParse(parts[1], out var p)) pid = p;
-            sessions.Add(new WslcSessionInfo(id, parts[2], pid));
+            if (parts.Length > 1 && uint.TryParse(parts[1], out var p)) pid = p;
+            var name = parts.Length > 2 ? string.Join(" ", parts.Skip(2)) : string.Empty;
+            sessions.Add(new WslcSessionInfo(id, name, pid));
         }
         return sessions;
     }
 
     public Task TerminateSessionsAsync(CancellationToken ct = default)
-        => _runner.RunAsync("system session terminate", ct: ct);
+        => _runner.RunAsync(["system", "session", "terminate"], ct: ct);
 
     public async Task<ResourceQuota> GetResourceQuotaAsync(CancellationToken ct = default)
     {
@@ -156,10 +158,4 @@ public sealed class WslcSystemService : IWslcSystemService
     [DllImport("kernel32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool GlobalMemoryStatusEx(ref MEMORYSTATUSEX lpBuffer);
-}
-
-internal static class CliQuote
-{
-    public static string Quote(string value)
-        => value.Contains(' ') ? $"\"{value.Replace("\"", "\\\"")}\"" : value;
 }

@@ -40,6 +40,8 @@ public partial class LogsViewModel : ObservableObject
 
     public AsyncRelayCommand LoadLogsCommand => new(LoadLogsAsync);
 
+    private int _requestVersion;
+
     public async Task LoadAsync()
     {
         IsLoading = true;
@@ -67,20 +69,25 @@ public partial class LogsViewModel : ObservableObject
     public async Task LoadLogsAsync()
     {
         if (string.IsNullOrWhiteSpace(SelectedContainerName)) return;
+        var version = ++_requestVersion;
         IsLoading = true;
         HasError = false;
         try
         {
-            LogText = await _logs.GetLogsAsync(SelectedContainerName);
+            var text = await _logs.GetLogsAsync(SelectedContainerName);
+            if (version != _requestVersion) return;
+            LogText = text;
         }
         catch (Exception ex)
         {
+            if (version != _requestVersion) return;
             LogText = string.Empty;
             ShowError(ex);
         }
         finally
         {
-            IsLoading = false;
+            if (version == _requestVersion)
+                IsLoading = false;
         }
     }
 

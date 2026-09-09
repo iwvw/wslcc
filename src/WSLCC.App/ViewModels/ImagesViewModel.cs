@@ -21,12 +21,6 @@ public partial class ImagesViewModel : ObservableObject
     public partial string PullText { get; set; }
 
     [ObservableProperty]
-    public partial double PullProgress { get; set; }
-
-    [ObservableProperty]
-    public partial bool IsPullIndeterminate { get; set; }
-
-    [ObservableProperty]
     public partial string PullImageText { get; set; }
 
     [ObservableProperty]
@@ -51,7 +45,7 @@ public partial class ImagesViewModel : ObservableObject
 
     public AsyncRelayCommand RefreshCommand => new(LoadAsync);
 
-    public AsyncRelayCommand<string> PullCommand => new(PullAsync);
+    public AsyncRelayCommand PullCommand => new(PullAsync);
 
     public async Task LoadAsync()
     {
@@ -75,11 +69,11 @@ public partial class ImagesViewModel : ObservableObject
         }
     }
 
-    public async Task PullAsync(string? imageRef)
+    public async Task PullAsync()
     {
+        var imageRef = PullImageText?.Trim();
         if (string.IsNullOrWhiteSpace(imageRef)) return;
         IsPulling = true;
-        IsPullIndeterminate = true;
         PullText = $"正在拉取 {imageRef} ...";
         HasError = false;
         var progress = new Progress<string>(line => PullText = line);
@@ -97,7 +91,6 @@ public partial class ImagesViewModel : ObservableObject
         finally
         {
             IsPulling = false;
-            IsPullIndeterminate = false;
         }
     }
 

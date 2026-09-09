@@ -35,4 +35,4 @@ powershell -ExecutionPolicy Bypass -File publish.ps1
 
 产物为自包含单目录 `dist\WSLCC-<版本>-win-x64.zip`，解压即可运行，无需安装运行时。
 
-推送 `v*` 标签会触发 GitHub Actions 自动构建并创建 Release。
+推送 `v*` 标签会触发 GitHub Actions 自动构建并创建 Release，产物包括 `WSLCC-win-x64.zip` 与 `WSLCC-Setup.exe` 安装器。应用内置自更新流程，检测到新版本后下载 zip 并自动完成替换升级。

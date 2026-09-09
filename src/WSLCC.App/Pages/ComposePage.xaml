@@ -29,11 +29,17 @@
                     Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                     Text="管理通过 docker-compose.yml 部署的项目" />
             </StackPanel>
-            <StackPanel
+<StackPanel
                 Grid.Column="1"
                 Orientation="Horizontal"
                 Spacing="8"
                 VerticalAlignment="Center">
+                <Button
+                    Click="OpenComposeDir_Click"
+                    Content="打开目录" />
+                <Button
+                    Click="ChangeComposeDir_Click"
+                    Content="更改目录" />
                 <Button
                     Command="{x:Bind ViewModel.RefreshCommand}"
                     Content="刷新" />
@@ -125,9 +131,9 @@
                                             Click="EditProject_Click"
                                             Content="编辑"
                                             Tag="{x:Bind}" />
-                                        <Button
-                                            Click="StopProject_Click"
-                                            Content="停止项目"
+<Button
+                                            Click="PrimaryAction_Click"
+                                            Content="{x:Bind PrimaryActionText}"
                                             Tag="{x:Bind}" />
                                         <Button
                                             Click="RestartProject_Click"

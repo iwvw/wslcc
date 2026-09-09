@@ -57,14 +57,13 @@ public partial class ContainersViewModel : ObservableObject
                 item.UpdateStats(stat);
             }
         }
-        catch
+        catch (Exception ex)
         {
+            global::WSLCC_App.App.WriteLog($"容器统计刷新失败：{ex}");
         }
     }
 
     public AsyncRelayCommand RefreshCommand => new(LoadAsync);
-
-    public Func<ContainerItemViewModel, Task>? InspectProvider { get; set; }
 
     public async Task LoadAsync()
     {

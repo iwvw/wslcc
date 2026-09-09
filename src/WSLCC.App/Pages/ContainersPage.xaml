@@ -148,7 +148,7 @@ Background="{ThemeResource TextFillColorSecondaryBrush}"
                                     Grid.Row="3"
                                     Style="{StaticResource CaptionTextBlockStyle}"
                                     Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                    Text="{x:Bind ResourceText}" />
+                                    Text="{x:Bind ResourceText, Mode=OneWay}" />
 
                                 <Border
                                     Grid.Row="4"

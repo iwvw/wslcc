@@ -81,7 +81,7 @@
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
             </NavigationView.FooterMenuItems>
-            <Frame x:Name="NavFrame" />
-        </NavigationView>
-    </Grid>
+<Frame x:Name="NavFrame" />
+            </NavigationView>
+        </Grid>
 </Window>

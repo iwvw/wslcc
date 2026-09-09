@@ -19,11 +19,20 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
+      - name: Compute version
+        id: version
+        shell: powershell
+        run: |
+          $tag = "${{ github.ref_name }}"
+          if ($tag -match '^v[0-9]') { $ver = $tag.Substring(1) } else { $ver = "0.1.0" }
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "ver=$ver"
+          Write-Output "version=$ver"
+
       - name: Restore & Build
-        run: dotnet build src/WSLCC.App/WSLCC.App.csproj -c Release -p:Platform=x64 -v:m
+        run: dotnet build src/WSLCC.App/WSLCC.App.csproj -c Release -p:Platform=x64 -p:Version=${{ steps.version.outputs.ver }} -v:m
 
       - name: Publish (self-contained)
-        run: dotnet publish src/WSLCC.App/WSLCC.App.csproj -c Release -r win-x64 --self-contained true -p:Platform=x64 -p:PublishTrimmed=false -p:PublishReadyToRun=false -o artifacts/publish -v:m
+        run: dotnet publish src/WSLCC.App/WSLCC.App.csproj -c Release -r win-x64 --self-contained true -p:Platform=x64 -p:Version=${{ steps.version.outputs.ver }} -p:PublishTrimmed=false -p:PublishReadyToRun=false -o artifacts/publish -v:m
 
       - name: Package zip
         shell: powershell
@@ -49,9 +58,7 @@ jobs:
           choco install innosetup -y --no-progress
           $iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
           if (-not (Test-Path $iscc)) { $iscc = "C:\Program Files\Inno Setup 6\ISCC.exe" }
-          $tag = "${{ github.ref_name }}"
-          $ver = if ($tag -like "v*") { $tag.Substring(1) } else { "0.1.0" }
-          & $iscc "/DSourceDir=$PWD\artifacts\publish" "/DAppVersion=$ver" "/DOutputDir=$PWD\artifacts" scripts\installer.iss
+          & $iscc "/DSourceDir=$PWD\artifacts\publish" "/DAppVersion=${{ steps.version.outputs.ver }}" "/DOutputDir=$PWD\artifacts" scripts\installer.iss
           if ($LASTEXITCODE -ne 0) { throw "installer build failed" }
 
       - name: Locate installer

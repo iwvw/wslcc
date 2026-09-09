@@ -14,19 +14,82 @@ public sealed partial class ComposePage : Page
 
     private ComposeProjectItemViewModel? _editingProject;
 
+    private bool _loaded;
+
     public ComposePage()
     {
         InitializeComponent();
         ViewModel = new ComposeViewModel(
             WslcHost.Default.Compose, WslcHost.Default.Settings, WslcHost.Default.Audit);
         DataContext = ViewModel;
-        Loaded += async (_, _) => await ViewModel.LoadAsync();
     }
 
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
         base.OnNavigatedTo(e);
+        if (_loaded) return;
+        _loaded = true;
         _ = ViewModel.LoadAsync();
+    }
+
+    private async void OpenComposeDir_Click(object sender, RoutedEventArgs e)
+    {
+        var dir = await ViewModel.GetComposeDirectoryAsync();
+        if (string.IsNullOrWhiteSpace(dir) || !Directory.Exists(dir))
+        {
+            dir = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "WSLCC", "compose");
+        }
+        if (string.IsNullOrWhiteSpace(dir) || !Directory.Exists(dir))
+        {
+            await ShowInfoAsync("尚未设置有效的 Compose 目录，请先点击“更改目录”选择。");
+            return;
+        }
+        try
+        {
+            Process.Start(new ProcessStartInfo("explorer.exe", $"\"{dir}\"") { UseShellExecute = true });
+        }
+        catch (Exception ex)
+        {
+            global::WSLCC_App.App.WriteLog($"打开 Compose 目录失败：{ex}");
+        }
+    }
+
+    private async void ChangeComposeDir_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var picker = new Windows.Storage.Pickers.FolderPicker
+            {
+                SuggestedStartLocation = Windows.Storage.Pickers.PickerLocationId.ComputerFolder,
+            };
+            picker.FileTypeFilter.Add("*");
+            WinRT.Interop.InitializeWithWindow.Initialize(
+                picker, WinRT.Interop.WindowNative.GetWindowHandle(global::WSLCC_App.App.Main!));
+            var folder = await picker.PickSingleFolderAsync();
+            if (folder is null) return;
+
+            await ViewModel.SetComposeDirectoryAsync(folder.Path);
+            await ViewModel.LoadAsync();
+            await ShowInfoAsync($"Compose 目录已更改为：{folder.Path}");
+        }
+        catch (Exception ex)
+        {
+            global::WSLCC_App.App.WriteLog($"更改 Compose 目录失败：{ex}");
+        }
+    }
+
+    private async Task ShowInfoAsync(string message)
+    {
+        var dialog = new ContentDialog
+        {
+            Title = "Compose 目录",
+            Content = message,
+            CloseButtonText = "确定",
+            XamlRoot = XamlRoot,
+        };
+        await dialog.ShowAsync();
     }
 
     private void OpenFolder_Click(object sender, RoutedEventArgs e)
@@ -36,7 +99,14 @@ public sealed partial class ComposePage : Page
         if (string.IsNullOrEmpty(project.FilePath)) return;
         var directory = Path.GetDirectoryName(project.FilePath);
         if (string.IsNullOrEmpty(directory) || !Directory.Exists(directory)) return;
-        Process.Start(new ProcessStartInfo("explorer.exe", $"\"{directory}\"") { UseShellExecute = true });
+        try
+        {
+            Process.Start(new ProcessStartInfo("explorer.exe", $"\"{directory}\"") { UseShellExecute = true });
+        }
+        catch (Exception ex)
+        {
+            global::WSLCC_App.App.WriteLog($"打开项目目录失败：{ex}");
+        }
     }
 
     private async void Deploy_Click(object sender, RoutedEventArgs e)
@@ -84,10 +154,20 @@ public sealed partial class ComposePage : Page
         });
     }
 
-    private async void StopProject_Click(object sender, RoutedEventArgs e)
+    private async void PrimaryAction_Click(object sender, RoutedEventArgs e)
     {
         var project = GetProject(sender);
         if (project is null) return;
+
+        if (project.IsAllStopped)
+        {
+            await ShowProgressAsync("启动容器", async progress =>
+            {
+                var started = await ViewModel.StartProjectAsync(project.Name, progress);
+                return string.Join(Environment.NewLine, started.Select(s => $"已启动  {s}"));
+            });
+            return;
+        }
 
         var confirm = new ContentDialog
         {
@@ -240,8 +320,18 @@ public sealed partial class ComposePage : Page
         };
         var showTask = dialog.ShowAsync();
         var progress = new Progress<string>(line => statusText.Text = line);
-        var summary = await run(progress);
-        statusText.Text = summary;
+        try
+        {
+            statusText.Text = await run(progress);
+        }
+        catch (OperationCanceledException)
+        {
+            statusText.Text = "已取消";
+        }
+        catch (Exception ex)
+        {
+            statusText.Text = $"操作失败：{ex.Message}";
+        }
         await showTask;
     }
 
