@@ -24,3 +24,6 @@ publish/
 *.db
 *.db-wal
 *.db-shm
+
+## Design sources
+docs/logo/
