@@ -45,3 +45,7 @@ powershell -ExecutionPolicy Bypass -File publish.ps1
 ## 友情链接
 
 - [Linux.do](https://linux.do) - 技术社区
+
+## 许可证
+
+本项目采用 [MIT License](LICENSE)。
