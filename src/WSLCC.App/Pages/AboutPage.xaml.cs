@@ -67,20 +67,21 @@ public sealed partial class AboutPage : Page
         if (info.Error is not null)
         {
             UpdateStatusText.Text = L.GetFormat("About.CheckFailed", info.Error);
-            UpdateBar.IsOpen = false;
+            UpdateActionsPanel.Visibility = Visibility.Collapsed;
             return;
         }
 
+        LatestVersionText.Text = info.LatestVersion ?? "-";
         if (info.HasUpdate)
         {
             UpdateStatusText.Text = L.GetFormat("About.NewVersionFound", info.LatestVersion);
-            UpdateBar.IsOpen = true;
+            UpdateActionsPanel.Visibility = Visibility.Visible;
             if (info.ReleaseUrl is not null)
                 ReleaseLink.NavigateUri = new Uri(info.ReleaseUrl);
             return;
         }
 
-        UpdateBar.IsOpen = false;
+        UpdateActionsPanel.Visibility = Visibility.Collapsed;
         UpdateStatusText.Text = info.LatestVersion is null
             ? L.Get("About.NoReleaseInfo")
             : L.GetFormat("About.UpToDate", info.LatestVersion);
