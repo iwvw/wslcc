@@ -13,9 +13,19 @@ $project = Join-Path $PSScriptRoot "src\WSLCC.App\WSLCC.App.csproj"
 $publishDir = Join-Path $PSScriptRoot "dist\publish"
 $exe = Join-Path $publishDir "WSLCC.exe"
 
+if (Test-Path $publishDir) { Remove-Item $publishDir -Recurse -Force }
+New-Item -ItemType Directory -Path $publishDir -Force | Out-Null
+
 Write-Host "==> dotnet publish ($Configuration|$Runtime, self-contained)"
 dotnet publish $project -c $Configuration -r $Runtime --self-contained true -o $publishDir -v:m
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+# 裁剪多余语言资源目录（仅保留中英文）
+$keep = @("en-us", "en-US", "en-GB", "zh-CN", "zh-Hans", "zh-Hant", "zh-TW")
+Get-ChildItem $publishDir -Directory | Where-Object {
+    $_.Name -match "^[a-z]{2,3}(-[A-Za-z]{2,8}){0,2}$" -and $_.Name -notin $keep
+} | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+Write-Host "已裁剪语言资源，保留: $($keep -join ', ')" -ForegroundColor DarkGray
 
 # 读取版本号
 $version = "0.1.0"

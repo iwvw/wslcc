@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.Input;
 using Microsoft.UI.Xaml;
 using WSLCC.Core.Models;
 using WSLCC.Core.Services;
+using WSLCC_App;
 
 namespace WSLCC.App.ViewModels;
 
@@ -12,6 +13,7 @@ public partial class ContainersViewModel : ObservableObject
     private readonly IWslcContainerService _containers;
     private readonly IWslcComposeService _compose;
     private readonly IWslcSettingsService _settings;
+    private readonly IWslcHistoryService _history;
     private readonly DispatcherTimer _statsTimer;
 
     public ObservableCollection<ContainerItemViewModel> Containers { get; } = new();
@@ -29,14 +31,22 @@ public partial class ContainersViewModel : ObservableObject
     public partial bool HasContainers { get; set; }
 
     [ObservableProperty]
+    public partial string NetworkWarningText { get; set; }
+
+    [ObservableProperty]
+    public partial bool HasNetworkWarning { get; set; }
+
+    [ObservableProperty]
     public partial ContainerItemViewModel? SelectedContainer { get; set; }
 
     public ContainersViewModel(
-        IWslcContainerService containers, IWslcComposeService compose, IWslcSettingsService settings)
+        IWslcContainerService containers, IWslcComposeService compose, IWslcSettingsService settings,
+        IWslcHistoryService history)
     {
         _containers = containers;
         _compose = compose;
         _settings = settings;
+        _history = history;
         ErrorMessage = string.Empty;
         _statsTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
         _statsTimer.Tick += async (_, _) => await RefreshStatsAsync();
@@ -69,15 +79,22 @@ public partial class ContainersViewModel : ObservableObject
     {
         IsLoading = true;
         HasError = false;
+        CheckNetworkWarning();
         try
         {
             var list = await _containers.ListAsync();
             var stats = await _containers.GetStatsAsync();
-            Containers.Clear();
-            foreach (var item in list)
+            var snapshotPorts = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var snap in await _history.QueryLatestSnapshotsAsync())
             {
-                stats.TryGetValue(item.Name, out var stat);
-                Containers.Add(new ContainerItemViewModel(item, stat));
+                if (!string.IsNullOrEmpty(snap.Ports))
+                    snapshotPorts[snap.Name] = snap.Ports;
+            }
+            MergeContainers(list, snapshotPorts);
+            foreach (var item in Containers)
+            {
+                stats.TryGetValue(item.Source.Name, out var stat);
+                item.UpdateStats(stat);
             }
             HasContainers = Containers.Count > 0;
         }
@@ -91,17 +108,47 @@ public partial class ContainersViewModel : ObservableObject
         }
     }
 
+    private void MergeContainers(IReadOnlyList<ContainerItem> list, IReadOnlyDictionary<string, string> snapshotPorts)
+    {
+        var byName = Containers.ToDictionary(x => x.Source.Name, StringComparer.OrdinalIgnoreCase);
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var item in list)
+        {
+            seen.Add(item.Name);
+            var ports = item.Ports.Length > 0
+                ? item.Ports
+                : snapshotPorts.TryGetValue(item.Name, out var cachedPorts) && cachedPorts.Length > 0
+                    ? cachedPorts
+                    : "";
+            if (byName.TryGetValue(item.Name, out var vm))
+            {
+                var merged = ports.Length > 0 ? item with { Ports = ports } : item with { Ports = vm.Source.Ports };
+                vm.UpdateSource(merged);
+            }
+            else
+            {
+                var fresh = ports.Length > 0 ? item with { Ports = ports } : item;
+                Containers.Add(new ContainerItemViewModel(fresh));
+            }
+        }
+        for (var i = Containers.Count - 1; i >= 0; i--)
+        {
+            if (!seen.Contains(Containers[i].Source.Name))
+                Containers.RemoveAt(i);
+        }
+    }
+
     public Task StartContainerAsync(ContainerItemViewModel item)
-        => ExecuteAsync(item, c => _containers.StartAsync(c.Source.Name));
+        => ExecuteContainerOpAsync(item, c => _containers.StartAsync(c.Source.Name));
 
     public Task StopContainerAsync(ContainerItemViewModel item)
-        => ExecuteAsync(item, c => _containers.StopAsync(c.Source.Name));
+        => ExecuteContainerOpAsync(item, c => _containers.StopAsync(c.Source.Name));
 
     public Task RestartContainerAsync(ContainerItemViewModel item)
-        => ExecuteAsync(item, c => _containers.RestartAsync(c.Source.Name));
+        => ExecuteContainerOpAsync(item, c => _containers.RestartAsync(c.Source.Name));
 
     public Task DeleteContainerAsync(ContainerItemViewModel item)
-        => ExecuteAsync(item, c => _containers.RemoveAsync(c.Source.Name, force: true));
+        => ExecuteRemoveAsync(item);
 
     public Task<string> GetRegistryMirrorAsync() => _settings.GetRegistryMirrorAsync();
 
@@ -151,17 +198,53 @@ public partial class ContainersViewModel : ObservableObject
         }
     }
 
-    private async Task ExecuteAsync(ContainerItemViewModel item, Func<ContainerItemViewModel, Task> operation)
+    private async Task ExecuteContainerOpAsync(
+        ContainerItemViewModel item, Func<ContainerItemViewModel, Task> operation)
     {
         try
         {
             await operation(item);
-            await LoadAsync();
+            var updated = await _containers.InspectAsync(item.Source.Name);
+            if (updated is not null)
+            {
+                var merged = updated.Ports.Length > 0
+                    ? updated
+                    : updated with { Ports = item.Source.Ports };
+                item.UpdateSource(merged);
+            }
+            else
+            {
+                await LoadAsync();
+            }
         }
         catch (Exception ex)
         {
             ShowError(ex);
         }
+    }
+
+    private async Task ExecuteRemoveAsync(ContainerItemViewModel item)
+    {
+        try
+        {
+            await _containers.RemoveAsync(item.Source.Name, force: true);
+            Containers.Remove(item);
+            HasContainers = Containers.Count > 0;
+        }
+        catch (Exception ex)
+        {
+            ShowError(ex);
+        }
+    }
+
+    private void CheckNetworkWarning()
+    {
+        var tunInterfaces = WslcNetworkDiagnostics.DetectProxyTunInterfaces();
+        HasNetworkWarning = tunInterfaces.Count > 0;
+        NetworkWarningText = HasNetworkWarning
+            ? L.GetFormat("ContainersPage.NetworkWarning",
+                string.Join(L.Get("ContainersPage.ListSeparator"), tunInterfaces))
+            : "";
     }
 
     private void ShowError(Exception ex)

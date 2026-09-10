@@ -14,6 +14,7 @@ public interface IWslcContainerService
     Task RemoveAsync(string nameOrId, bool force = false, CancellationToken ct = default);
     Task RunAsync(ContainerCreateOptions options, IProgress<string>? progress = null, CancellationToken ct = default);
     Task<IReadOnlyDictionary<string, ContainerStats>> GetStatsAsync(CancellationToken ct = default);
+    Task<ContainerItem?> InspectAsync(string nameOrId, CancellationToken ct = default);
 }
 
 public sealed class WslcContainerService : IWslcContainerService
@@ -112,6 +113,80 @@ public sealed class WslcContainerService : IWslcContainerService
                 pids);
         }
         return result;
+    }
+
+    public async Task<ContainerItem?> InspectAsync(string nameOrId, CancellationToken ct = default)
+    {
+        try
+        {
+            var json = await _runner.RunAsync(["inspect", nameOrId], ct: ct).ConfigureAwait(false);
+            return ParseInspect(nameOrId, json);
+        }
+        catch (WslcCliException)
+        {
+            return null;
+        }
+    }
+
+    private static ContainerItem? ParseInspect(string fallbackName, string json)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(json);
+            var root = doc.RootElement;
+            if (root.ValueKind == JsonValueKind.Array && root.GetArrayLength() > 0)
+                root = root[0];
+
+            var name = (JsonGet(root, "Name", "name") ?? fallbackName).TrimStart('/');
+            var id = JsonGet(root, "ID", "Id") ?? "";
+            var image = "";
+            if (root.TryGetProperty("Config", out var config) && config.ValueKind == JsonValueKind.Object)
+                image = JsonGet(config, "Image") ?? "";
+            if (image.Length == 0)
+                image = JsonGet(root, "Image") ?? "";
+
+            var state = "";
+            var status = "";
+            if (root.TryGetProperty("State", out var stateEl) && stateEl.ValueKind == JsonValueKind.Object)
+            {
+                state = JsonGet(stateEl, "Status") ?? "";
+                var exitCode = 0;
+                if (stateEl.TryGetProperty("ExitCode", out var ec) && ec.TryGetInt32(out var ecv))
+                    exitCode = ecv;
+                status = state.Equals("running", StringComparison.OrdinalIgnoreCase)
+                    ? "Up"
+                    : $"Exited ({exitCode})";
+            }
+
+            return new ContainerItem(id, name, image, state, status, ParseInspectPorts(root), null, null);
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    private static string ParseInspectPorts(JsonElement root)
+    {
+        if (!root.TryGetProperty("NetworkSettings", out var ns) || ns.ValueKind != JsonValueKind.Object)
+            return "";
+        if (!ns.TryGetProperty("Ports", out var portsEl) || portsEl.ValueKind != JsonValueKind.Object)
+            return "";
+        var parts = new List<string>();
+        foreach (var port in portsEl.EnumerateObject())
+        {
+            if (port.Value.ValueKind != JsonValueKind.Array)
+                continue;
+            foreach (var binding in port.Value.EnumerateArray())
+            {
+                if (binding.ValueKind != JsonValueKind.Object)
+                    continue;
+                var hostIp = JsonGet(binding, "HostIp") ?? "";
+                var hostPort = JsonGet(binding, "HostPort") ?? "";
+                parts.Add($"{hostIp}:{hostPort}->{port.Name}");
+            }
+        }
+        return string.Join(", ", parts);
     }
 
     private async Task ExecuteAsync(

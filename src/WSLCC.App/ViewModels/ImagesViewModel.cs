@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using WSLCC.Core.Services;
+using WSLCC_App;
 
 namespace WSLCC.App.ViewModels;
 
@@ -74,18 +75,18 @@ public partial class ImagesViewModel : ObservableObject
         var imageRef = PullImageText?.Trim();
         if (string.IsNullOrWhiteSpace(imageRef)) return;
         IsPulling = true;
-        PullText = $"正在拉取 {imageRef} ...";
+        PullText = L.GetFormat("ImagesPage.PullingFormat", imageRef);
         HasError = false;
         var progress = new Progress<string>(line => PullText = line);
         try
         {
             await _images.PullAsync(imageRef, progress);
-            PullText = $"已拉取 {imageRef}";
+            PullText = L.GetFormat("ImagesPage.PulledFormat", imageRef);
             await LoadAsync();
         }
         catch (Exception ex)
         {
-            PullText = $"拉取失败：{ex.Message}";
+            PullText = L.GetFormat("ImagesPage.PullFailedFormat", ex.Message);
             ShowError(ex);
         }
         finally

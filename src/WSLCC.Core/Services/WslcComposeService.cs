@@ -54,6 +54,7 @@ public interface IWslcComposeService
     Task<IReadOnlyList<string>> DeleteProjectAsync(string projectName, IProgress<string>? progress = null, CancellationToken ct = default);
     Task<IReadOnlyList<string>> RestartProjectAsync(string projectName, IProgress<string>? progress = null, CancellationToken ct = default);
     Task<IReadOnlyList<ComposeDeploymentResult>> RebuildProjectAsync(string projectName, string? registryMirror = null, IProgress<string>? progress = null, CancellationToken ct = default);
+    Task MigrateLegacyComposeProjectsAsync(CancellationToken ct = default);
 }
 
 public sealed class WslcComposeService : IWslcComposeService
@@ -77,6 +78,50 @@ public sealed class WslcComposeService : IWslcComposeService
     {
         var services = ParseFile(composeFilePath, out var projectName);
         return Task.FromResult(new ComposeProjectInfo(projectName, composeFilePath, services));
+    }
+
+    public async Task MigrateLegacyComposeProjectsAsync(CancellationToken ct = default)
+    {
+        var legacy = WslcAppData.LegacyComposeDirectory();
+        if (!Directory.Exists(legacy))
+            return;
+
+        var runningProjects = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        try
+        {
+            var containers = await _containers.ListAsync(ct).ConfigureAwait(false);
+            var entries = await _deployments.QueryAsync().ConfigureAwait(false);
+            foreach (var group in entries.GroupBy(e => e.ProjectName, StringComparer.OrdinalIgnoreCase))
+            {
+                var hasRunning = group.Select(e => e.ContainerName)
+                    .Intersect(containers.Where(c => c.State.Equals("running", StringComparison.OrdinalIgnoreCase)).Select(c => c.Name),
+                        StringComparer.OrdinalIgnoreCase)
+                    .Any();
+                if (hasRunning)
+                    runningProjects.Add(group.Key);
+            }
+        }
+        catch
+        {
+        }
+
+        foreach (var projDir in Directory.GetDirectories(legacy))
+        {
+            var name = Path.GetFileName(projDir);
+            var target = Path.Combine(WslcAppData.ResolveDirectory(), "compose", name);
+            if (Directory.Exists(target) || runningProjects.Contains(name))
+                continue;
+            try
+            {
+                Directory.Move(projDir, target);
+                var filePath = Path.Combine(target, "docker-compose.yml");
+                if (File.Exists(filePath))
+                    await SafeRecordAsync(() => _deployments.UpdateComposeFilePathAsync(name, filePath)).ConfigureAwait(false);
+            }
+            catch
+            {
+            }
+        }
     }
 
     public async Task<IReadOnlyList<ComposeDeploymentResult>> DeployAsync(
@@ -161,9 +206,7 @@ public sealed class WslcComposeService : IWslcComposeService
     private static string PersistComposeFile(string projectName, string content)
     {
         projectName = SanitizeProjectName(projectName);
-        var dir = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "WSLCC", "compose", projectName);
+        var dir = Path.Combine(WslcAppData.ResolveDirectory(), "compose", projectName);
         Directory.CreateDirectory(dir);
         var path = Path.Combine(dir, "docker-compose.yml");
         File.WriteAllText(path, content);

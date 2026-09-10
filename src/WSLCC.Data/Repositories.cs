@@ -310,6 +310,17 @@ public sealed class ComposeDeploymentRepository
             return 0;
         });
 
+    public async Task UpdateComposeFilePathAsync(string projectName, string composeFilePath)
+        => await _db.ExecuteWriteAsync(async conn =>
+        {
+            await using var cmd = conn.CreateCommand();
+            cmd.CommandText = "UPDATE compose_deployment SET compose_file_path = $f WHERE project_name = $p;";
+            cmd.Parameters.AddWithValue("$p", projectName);
+            cmd.Parameters.AddWithValue("$f", composeFilePath);
+            await cmd.ExecuteNonQueryAsync();
+            return 0;
+        });
+
     public async Task<IReadOnlyList<string>> GetProjectNamesAsync()
         => await _db.ExecuteReadAsync(async conn =>
         {

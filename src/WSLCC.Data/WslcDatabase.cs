@@ -22,10 +22,26 @@ public sealed class WslcDatabase
 
     public static WslcDatabase OpenDefault()
     {
-        var path = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "WSLCC", "wslcc.db");
-        return new WslcDatabase(path);
+        var dir = WslcAppData.ResolveDirectory();
+        var local = Path.Combine(dir, "wslcc.db");
+        if (!File.Exists(local))
+        {
+            var legacy = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "WSLCC", "wslcc.db");
+            if (File.Exists(legacy))
+            {
+                try
+                {
+                    Directory.CreateDirectory(dir);
+                    File.Copy(legacy, local);
+                }
+                catch
+                {
+                }
+            }
+        }
+        return new WslcDatabase(local);
     }
 
     public async Task InitializeAsync()

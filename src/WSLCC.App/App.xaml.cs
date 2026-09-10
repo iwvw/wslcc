@@ -73,6 +73,20 @@ public partial class App : Application
         _window.Activate();
         _ = RestoreContainersIfEnabledAsync();
         _ = AutoCheckUpdateAsync();
+        _ = MigrateLegacyComposeAsync();
+    }
+
+    private static async Task MigrateLegacyComposeAsync()
+    {
+        try
+        {
+            await Task.Delay(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
+            await WslcHost.Default.Compose.MigrateLegacyComposeProjectsAsync().ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            WriteLog($"迁移旧 Compose 目录失败：{ex}");
+        }
     }
 
     private static async Task AutoCheckUpdateAsync()

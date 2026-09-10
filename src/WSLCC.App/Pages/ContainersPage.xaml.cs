@@ -5,6 +5,7 @@ using Microsoft.UI.Xaml.Media;
 using WSLCC.App.ViewModels;
 using WSLCC.Core.Models;
 using WSLCC.Core.Services;
+using WSLCC_App;
 
 namespace WSLCC.App.Pages;
 
@@ -18,7 +19,8 @@ public sealed partial class ContainersPage : Page
     {
         InitializeComponent();
         ViewModel = new ContainersViewModel(
-            WslcHost.Default.Containers, WslcHost.Default.Compose, WslcHost.Default.Settings);
+            WslcHost.Default.Containers, WslcHost.Default.Compose, WslcHost.Default.Settings,
+            WslcHost.Default.History);
         DataContext = ViewModel;
         Loaded += async (_, _) =>
         {
@@ -55,31 +57,31 @@ public sealed partial class ContainersPage : Page
         confirmPanel.Children.Add(serviceText);
         var mirrorBox = new TextBox
         {
-            PlaceholderText = "留空不替换",
-            Header = "镜像加速源",
+            PlaceholderText = L.Get("ContainersPage.MirrorPlaceholder"),
+            Header = L.Get("ContainersPage.MirrorHeader"),
             Text = defaultMirror,
         };
         confirmPanel.Children.Add(mirrorBox);
 
         var confirm = new ContentDialog
         {
-            Title = "Compose 部署确认",
+            Title = L.Get("ContainersPage.ComposeDeployTitle"),
             Content = confirmPanel,
-            PrimaryButtonText = "部署",
-            CloseButtonText = "取消",
+            PrimaryButtonText = L.Get("ContainersPage.DeployButton"),
+            CloseButtonText = L.Get("ContainersPage.CancelButton"),
             DefaultButton = ContentDialogButton.Primary,
             XamlRoot = XamlRoot,
         };
         if (await confirm.ShowAsync() != ContentDialogResult.Primary) return;
 
         var mirror = string.IsNullOrWhiteSpace(mirrorBox.Text) ? null : mirrorBox.Text.Trim();
-        await ShowComposeProgressAsync("Compose 部署", async progress =>
+        await ShowComposeProgressAsync(L.Get("ContainersPage.ComposeDeployProgressTitle"), async progress =>
         {
             var results = await ViewModel.DeployComposeAsync(path, progress, mirror);
             return string.Join(Environment.NewLine,
-                results.Select(r => r.Success
-                    ? $"部署成功  {r.ContainerName}  {r.Error}"
-                    : $"部署失败  {r.ContainerName}  {r.Error}"));
+                results.Select(r => L.GetFormat(
+                    r.Success ? "ContainersPage.DeployResultOk" : "ContainersPage.DeployResultFail",
+                    r.ContainerName, r.Error)));
         });
     }
 
@@ -93,30 +95,31 @@ public sealed partial class ContainersPage : Page
 
         var confirm = new ContentDialog
         {
-            Title = "Compose 停止",
-            Content = "将停止并删除以下容器：\n" + string.Join("\n", services.Select(s => $"• {s.ContainerName}")),
-            PrimaryButtonText = "停止并删除",
-            CloseButtonText = "取消",
+            Title = L.Get("ContainersPage.ComposeStopTitle"),
+            Content = L.GetFormat("ContainersPage.ComposeStopContent",
+                string.Join("\n", services.Select(s => $"• {s.ContainerName}"))),
+            PrimaryButtonText = L.Get("ContainersPage.StopAndDeleteButton"),
+            CloseButtonText = L.Get("ContainersPage.CancelButton"),
             DefaultButton = ContentDialogButton.Close,
             XamlRoot = XamlRoot,
         };
         if (await confirm.ShowAsync() != ContentDialogResult.Primary) return;
 
-        await ShowComposeProgressAsync("Compose 停止", async progress =>
+        await ShowComposeProgressAsync(L.Get("ContainersPage.ComposeStopProgressTitle"), async progress =>
         {
             var stopped = await ViewModel.StopComposeAsync(path, progress);
-            return string.Join(Environment.NewLine, stopped.Select(s => $"已删除  {s}"));
+            return string.Join(Environment.NewLine, stopped.Select(s => L.GetFormat("ContainersPage.RemovedItem", s)));
         });
     }
 
     private async Task ShowComposeProgressAsync(string title, Func<IProgress<string>, Task<string>> run)
     {
-        var statusText = new TextBlock { Text = "执行中..." };
+        var statusText = new TextBlock { Text = L.Get("ContainersPage.ProgressRunning") };
         var dialog = new ContentDialog
         {
             Title = title,
             Content = statusText,
-            CloseButtonText = "完成",
+            CloseButtonText = L.Get("ContainersPage.DoneButton"),
             DefaultButton = ContentDialogButton.Close,
             XamlRoot = XamlRoot,
         };
@@ -128,11 +131,11 @@ public sealed partial class ContainersPage : Page
         }
         catch (OperationCanceledException)
         {
-            statusText.Text = "已取消";
+            statusText.Text = L.Get("ContainersPage.Cancelled");
         }
         catch (Exception ex)
         {
-            statusText.Text = $"操作失败：{ex.Message}";
+            statusText.Text = L.GetFormat("ContainersPage.OperationFailed", ex.Message);
         }
         await showTask;
     }
@@ -165,10 +168,10 @@ public sealed partial class ContainersPage : Page
             case "delete":
                 var confirm = new ContentDialog
                 {
-                    Title = "删除容器",
-                    Content = $"确定删除容器「{item.Source.Name}」吗？该操作不可撤销。",
-                    PrimaryButtonText = "删除",
-                    CloseButtonText = "取消",
+                    Title = L.Get("ContainersPage.DeleteContainerTitle"),
+                    Content = L.GetFormat("ContainersPage.DeleteContainerConfirm", item.Source.Name),
+                    PrimaryButtonText = L.Get("ContainersPage.DeleteButton"),
+                    CloseButtonText = L.Get("ContainersPage.CancelButton"),
                     DefaultButton = ContentDialogButton.Close,
                     XamlRoot = XamlRoot,
                 };
@@ -224,7 +227,7 @@ public sealed partial class ContainersPage : Page
         }
         catch (Exception ex)
         {
-            await ShowInfoDialogAsync("详情不可用", ex.Message);
+            await ShowInfoDialogAsync(L.Get("ContainersPage.InspectUnavailable"), ex.Message);
             return;
         }
         var scroll = new ScrollViewer
@@ -240,7 +243,7 @@ public sealed partial class ContainersPage : Page
             FontSize = 12,
             IsTextSelectionEnabled = true,
         };
-        await ShowInfoDialogAsync($"容器详情：{container.Source.Name}", scroll);
+        await ShowInfoDialogAsync(L.GetFormat("ContainersPage.ContainerDetailTitle", container.Source.Name), scroll);
     }
 
     private async Task ShowInfoDialogAsync(string title, object content)
@@ -249,7 +252,7 @@ public sealed partial class ContainersPage : Page
         {
             Title = title,
             Content = content,
-            CloseButtonText = "关闭",
+            CloseButtonText = L.Get("ContainersPage.CloseButton"),
             DefaultButton = ContentDialogButton.Close,
             XamlRoot = XamlRoot,
         };
@@ -258,22 +261,22 @@ public sealed partial class ContainersPage : Page
 
     private async Task<ContainerCreateOptions?> ShowCreateDialogAsync()
     {
-        var nameBox = new TextBox { PlaceholderText = "容器名称（可选）" };
-        var imageBox = new TextBox { PlaceholderText = "镜像，如 nginx:latest" };
-        var portsBox = new TextBox { PlaceholderText = "端口映射，如 8080:80（多个用逗号分隔）" };
-        var envBox = new TextBox { PlaceholderText = "环境变量，如 TZ=Asia/Shanghai（多个用逗号分隔）" };
+        var nameBox = new TextBox { PlaceholderText = L.Get("ContainersPage.CreateNamePlaceholder") };
+        var imageBox = new TextBox { PlaceholderText = L.Get("ContainersPage.CreateImagePlaceholder") };
+        var portsBox = new TextBox { PlaceholderText = L.Get("ContainersPage.CreatePortsPlaceholder") };
+        var envBox = new TextBox { PlaceholderText = L.Get("ContainersPage.CreateEnvPlaceholder") };
         var commandBox = new TextBox
         {
-            PlaceholderText = "如 /app/api-monitor 或 nginx -g 'daemon off;'（留空使用镜像默认）",
-            Header = "启动命令（可选）",
+            PlaceholderText = L.Get("ContainersPage.CreateCommandPlaceholder"),
+            Header = L.Get("ContainersPage.CreateCommandHeader"),
         };
         var volumeBox = new TextBox
         {
-            PlaceholderText = @"卷映射，如 C:\data:/app/data 或 ./data:/app/data（多个用逗号分隔）",
-            Header = "卷 / 目录映射（可选）",
+            PlaceholderText = L.Get("ContainersPage.CreateVolumePlaceholder"),
+            Header = L.Get("ContainersPage.CreateVolumeHeader"),
         };
-        var autoRemove = new CheckBox { Content = "退出后自动删除 (--rm)" };
-        var detached = new CheckBox { Content = "后台运行 (-d)", IsChecked = true };
+        var autoRemove = new CheckBox { Content = L.Get("ContainersPage.CreateAutoRemove") };
+        var detached = new CheckBox { Content = L.Get("ContainersPage.CreateDetached"), IsChecked = true };
 
         var panel = new StackPanel { Spacing = 12 };
         panel.Children.Add(nameBox);
@@ -287,10 +290,10 @@ public sealed partial class ContainersPage : Page
 
         var dialog = new ContentDialog
         {
-            Title = "新建容器",
+            Title = L.Get("ContainersPage.CreateContainerTitle"),
             Content = panel,
-            PrimaryButtonText = "创建",
-            CloseButtonText = "取消",
+            PrimaryButtonText = L.Get("ContainersPage.CreateButton"),
+            CloseButtonText = L.Get("ContainersPage.CancelButton"),
             DefaultButton = ContentDialogButton.Primary,
             XamlRoot = XamlRoot,
         };

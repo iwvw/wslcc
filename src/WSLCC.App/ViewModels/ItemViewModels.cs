@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using WSLCC.Core.Models;
+using WSLCC_App;
 
 namespace WSLCC.App.ViewModels;
 
@@ -37,7 +38,7 @@ public sealed partial class ContainerItemViewModel : ObservableObject
 {
     private ContainerStats? _stats;
 
-    public ContainerItem Source { get; }
+    public ContainerItem Source { get; private set; }
 
     public string Name => Source.Name;
 
@@ -57,8 +58,8 @@ public sealed partial class ContainerItemViewModel : ObservableObject
     {
         get
         {
-            if (_stats is null) return "暂无资源数据";
-            return $"CPU {_stats.CpuPerc} · 内存 {_stats.MemUsage}（{_stats.MemPerc}）";
+            if (_stats is null) return L.Get("ContainersPage.NoResourceData");
+            return L.GetFormat("ContainersPage.ResourceFormat", _stats.CpuPerc, _stats.MemUsage, _stats.MemPerc);
         }
     }
 
@@ -92,5 +93,19 @@ public sealed partial class ContainerItemViewModel : ObservableObject
     {
         _stats = stats;
         OnPropertyChanged(nameof(ResourceText));
+    }
+
+    public void UpdateSource(ContainerItem source)
+    {
+        Source = source;
+        OnPropertyChanged(nameof(Name));
+        OnPropertyChanged(nameof(Image));
+        OnPropertyChanged(nameof(State));
+        OnPropertyChanged(nameof(Status));
+        OnPropertyChanged(nameof(Ports));
+        OnPropertyChanged(nameof(IsRunning));
+        OnPropertyChanged(nameof(StateGlyph));
+        OnPropertyChanged(nameof(WebUrl));
+        OnPropertyChanged(nameof(HasWebUrl));
     }
 }

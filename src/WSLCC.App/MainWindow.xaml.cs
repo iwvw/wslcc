@@ -18,6 +18,7 @@ public sealed partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        Title = L.Get("MainWindow.Title");
 
         ExtendsContentIntoTitleBar = true;
         SetTitleBar(AppTitleBar);
@@ -43,7 +44,7 @@ public sealed partial class MainWindow : Window
             _notifyIcon = new Forms.NotifyIcon
             {
                 Icon = new System.Drawing.Icon(Path.Combine(AppContext.BaseDirectory, "Assets", "AppIcon.ico")),
-                Text = "WSLCC 容器管理",
+                Text = L.Get("MainWindow.TrayTooltip"),
                 Visible = true,
             };
             _notifyIcon.MouseDown += (_, e) =>
@@ -54,9 +55,9 @@ public sealed partial class MainWindow : Window
 
             var menu = new Forms.ContextMenuStrip();
             menu.Opening += (_, _) => ApplyMenuTheme(menu);
-            menu.Items.Add("打开 WSLCC", null, (_, _) => ShowMainWindow());
+            menu.Items.Add(L.Get("MainWindow.TrayOpen"), null, (_, _) => ShowMainWindow());
             menu.Items.Add(new Forms.ToolStripSeparator());
-            menu.Items.Add("退出", null, (_, _) => ExitFromTray());
+            menu.Items.Add(L.Get("MainWindow.TrayExit"), null, (_, _) => ExitFromTray());
             _notifyIcon.ContextMenuStrip = menu;
         }
         catch
@@ -164,22 +165,22 @@ public sealed partial class MainWindow : Window
 
     private async Task ShowCloseBehaviorDialogAsync()
     {
-        var remember = new CheckBox { Content = "记住选择，下次不再询问", VerticalAlignment = VerticalAlignment.Center };
+        var remember = new CheckBox { Content = L.Get("MainWindow.CloseDialogRemember"), VerticalAlignment = VerticalAlignment.Center };
         var dialog = new ContentDialog
         {
-            Title = "关闭 WSLCC",
+            Title = L.Get("MainWindow.CloseDialogTitle"),
             Content = new StackPanel
             {
                 Spacing = 12,
                 Children =
                 {
-                    new TextBlock { Text = "关闭后最小化到系统托盘，或直接退出？", TextWrapping = TextWrapping.Wrap },
+                    new TextBlock { Text = L.Get("MainWindow.CloseDialogMessage"), TextWrapping = TextWrapping.Wrap },
                     remember,
                 },
             },
-            PrimaryButtonText = "最小化到托盘",
-            SecondaryButtonText = "直接退出",
-            CloseButtonText = "取消",
+            PrimaryButtonText = L.Get("MainWindow.CloseDialogMinimize"),
+            SecondaryButtonText = L.Get("MainWindow.CloseDialogExit"),
+            CloseButtonText = L.Get("MainWindow.CloseDialogCancel"),
             DefaultButton = ContentDialogButton.Primary,
             XamlRoot = this.Content?.XamlRoot,
         };
@@ -206,7 +207,7 @@ public sealed partial class MainWindow : Window
         {
             var notifyEnabled = WslcHost.Default.Settings.GetMinimizeNotifyEnabledAsync().GetAwaiter().GetResult();
             if (notifyEnabled)
-                _notifyIcon?.ShowBalloonTip(1500, "WSLCC", "已最小化到系统托盘，点击图标可恢复窗口", Forms.ToolTipIcon.Info);
+                _notifyIcon?.ShowBalloonTip(1500, "WSLCC", L.Get("MainWindow.MinimizedBalloon"), Forms.ToolTipIcon.Info);
         }
         catch
         {

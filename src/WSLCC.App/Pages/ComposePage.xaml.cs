@@ -5,6 +5,7 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Navigation;
 using WSLCC.App.ViewModels;
 using WSLCC.Core.Services;
+using WSLCC_App;
 
 namespace WSLCC.App.Pages;
 
@@ -43,7 +44,7 @@ public sealed partial class ComposePage : Page
         }
         if (string.IsNullOrWhiteSpace(dir) || !Directory.Exists(dir))
         {
-            await ShowInfoAsync("尚未设置有效的 Compose 目录，请先点击“更改目录”选择。");
+            await ShowInfoAsync(L.Get("ComposePage.NoComposeDir"));
             return;
         }
         try
@@ -72,7 +73,7 @@ public sealed partial class ComposePage : Page
 
             await ViewModel.SetComposeDirectoryAsync(folder.Path);
             await ViewModel.LoadAsync();
-            await ShowInfoAsync($"Compose 目录已更改为：{folder.Path}");
+            await ShowInfoAsync(L.GetFormat("ComposePage.DirChangedFormat", folder.Path));
         }
         catch (Exception ex)
         {
@@ -84,9 +85,9 @@ public sealed partial class ComposePage : Page
     {
         var dialog = new ContentDialog
         {
-            Title = "Compose 目录",
+            Title = L.Get("ComposePage.ComposeDirTitle"),
             Content = message,
-            CloseButtonText = "确定",
+            CloseButtonText = L.Get("ComposePage.OkButton"),
             XamlRoot = XamlRoot,
         };
         await dialog.ShowAsync();
@@ -113,7 +114,7 @@ public sealed partial class ComposePage : Page
     {
         _editingProject = null;
         var mirror = await ViewModel.GetRegistryMirrorAsync();
-        ShowEditor("新建编排项目", null, null, showMirror: true, mirror);
+        ShowEditor(L.Get("ComposePage.NewProjectTitle"), null, null, showMirror: true, mirror);
     }
 
     private async void EditProject_Click(object sender, RoutedEventArgs e)
@@ -122,9 +123,11 @@ public sealed partial class ComposePage : Page
         if (project is null) return;
 
         var content = await ViewModel.ReadProjectFileAsync(project.FilePath);
-        content ??= $"# 无法读取 compose 文件：{project.FilePath ?? "（未记录路径）"}\n# 请确认文件存在后重试，或在此处粘贴新的 compose 内容。\n";
+        content ??= L.GetFormat("ComposePage.CannotReadFile",
+            project.FilePath ?? L.Get("ComposePage.NoRecordedPath"));
         _editingProject = project;
-        ShowEditor($"编辑项目 {project.Name}", project.FilePath ?? "（未记录路径）", content, showMirror: false, string.Empty);
+        ShowEditor(L.GetFormat("ComposePage.EditProjectTitle", project.Name),
+            project.FilePath ?? L.Get("ComposePage.NoRecordedPath"), content, showMirror: false, string.Empty);
     }
 
     private async void RebuildProject_Click(object sender, RoutedEventArgs e)
@@ -134,23 +137,23 @@ public sealed partial class ComposePage : Page
 
         var confirm = new ContentDialog
         {
-            Title = "重建容器",
-            Content = $"将强制删除并重新创建项目「{project.Name}」的所有容器，使用最新的 compose 配置。",
-            PrimaryButtonText = "重建",
-            CloseButtonText = "取消",
+            Title = L.Get("ComposePage.RebuildTitle"),
+            Content = L.GetFormat("ComposePage.RebuildConfirm", project.Name),
+            PrimaryButtonText = L.Get("ComposePage.RebuildAction"),
+            CloseButtonText = L.Get("ComposePage.CancelButton"),
             DefaultButton = ContentDialogButton.Close,
             XamlRoot = XamlRoot,
         };
         if (await confirm.ShowAsync() != ContentDialogResult.Primary) return;
 
         var mirror = await ViewModel.GetRegistryMirrorAsync();
-        await ShowProgressAsync("重建容器", async progress =>
+        await ShowProgressAsync(L.Get("ComposePage.RebuildProgressTitle"), async progress =>
         {
             var results = await ViewModel.RebuildProjectAsync(project.Name, mirror, progress);
             return string.Join(Environment.NewLine,
                 results.Select(r => r.Success
-                    ? $"重建成功  {r.ContainerName}"
-                    : $"重建失败  {r.ContainerName}  {r.Error}"));
+                    ? L.GetFormat("ComposePage.RebuildResultOk", r.ContainerName)
+                    : L.GetFormat("ComposePage.RebuildResultFail", r.ContainerName, r.Error)));
         });
     }
 
@@ -161,29 +164,29 @@ public sealed partial class ComposePage : Page
 
         if (project.IsAllStopped)
         {
-            await ShowProgressAsync("启动容器", async progress =>
+            await ShowProgressAsync(L.Get("ComposePage.StartProgressTitle"), async progress =>
             {
                 var started = await ViewModel.StartProjectAsync(project.Name, progress);
-                return string.Join(Environment.NewLine, started.Select(s => $"已启动  {s}"));
+                return string.Join(Environment.NewLine, started.Select(s => L.GetFormat("ComposePage.StartedItem", s)));
             });
             return;
         }
 
         var confirm = new ContentDialog
         {
-            Title = "停止编排项目",
-            Content = $"将停止项目「{project.Name}」的所有容器（容器保留，可随时重启）。",
-            PrimaryButtonText = "停止",
-            CloseButtonText = "取消",
+            Title = L.Get("ComposePage.StopProjectTitle"),
+            Content = L.GetFormat("ComposePage.StopProjectConfirm", project.Name),
+            PrimaryButtonText = L.Get("ComposePage.StopButton"),
+            CloseButtonText = L.Get("ComposePage.CancelButton"),
             DefaultButton = ContentDialogButton.Close,
             XamlRoot = XamlRoot,
         };
         if (await confirm.ShowAsync() != ContentDialogResult.Primary) return;
 
-        await ShowProgressAsync("停止容器", async progress =>
+        await ShowProgressAsync(L.Get("ComposePage.StopProgressTitle"), async progress =>
         {
             var stopped = await ViewModel.StopProjectAsync(project.Name, progress);
-            return string.Join(Environment.NewLine, stopped.Select(s => $"已停止  {s}"));
+            return string.Join(Environment.NewLine, stopped.Select(s => L.GetFormat("ComposePage.StoppedItem", s)));
         });
     }
 
@@ -192,10 +195,10 @@ public sealed partial class ComposePage : Page
         var project = GetProject(sender);
         if (project is null) return;
 
-        await ShowProgressAsync("重启容器", async progress =>
+        await ShowProgressAsync(L.Get("ComposePage.RestartProgressTitle"), async progress =>
         {
             var restarted = await ViewModel.RestartProjectAsync(project.Name, progress);
-            return string.Join(Environment.NewLine, restarted.Select(s => $"已重启  {s}"));
+            return string.Join(Environment.NewLine, restarted.Select(s => L.GetFormat("ComposePage.RestartedItem", s)));
         });
     }
 
@@ -206,32 +209,34 @@ public sealed partial class ComposePage : Page
 
         var confirm = new ContentDialog
         {
-            Title = "删除编排项目",
-            Content = $"将停止并删除项目「{project.Name}」的所有容器，并移除该项目的编排记录。",
-            PrimaryButtonText = "删除",
-            CloseButtonText = "取消",
+            Title = L.Get("ComposePage.DeleteProjectTitle"),
+            Content = L.GetFormat("ComposePage.DeleteProjectConfirm", project.Name),
+            PrimaryButtonText = L.Get("ComposePage.DeleteButton"),
+            CloseButtonText = L.Get("ComposePage.CancelButton"),
             DefaultButton = ContentDialogButton.Close,
             XamlRoot = XamlRoot,
         };
         if (await confirm.ShowAsync() != ContentDialogResult.Primary) return;
 
-        await ShowProgressAsync("删除容器", async progress =>
+        await ShowProgressAsync(L.Get("ComposePage.DeleteProgressTitle"), async progress =>
         {
             var deleted = await ViewModel.DeleteProjectAsync(project.Name, progress);
-            return string.Join(Environment.NewLine, deleted.Select(s => $"已删除  {s}"));
+            return string.Join(Environment.NewLine, deleted.Select(s => L.GetFormat("ComposePage.DeletedItem", s)));
         });
     }
 
     private void ShowEditor(string title, string? filePath, string? content, bool showMirror, string defaultMirror)
     {
         EditorTitleText.Text = title;
-        EditorPathText.Text = filePath ?? "未选择文件，可直接粘贴 compose 内容";
+        EditorPathText.Text = filePath ?? L.Get("ComposePage.NoFileSelected");
         EditorBox.Document.SetText(TextSetOptions.None, content ?? string.Empty);
         MirrorBox.Visibility = showMirror ? Visibility.Visible : Visibility.Collapsed;
         ProjectNameBox.Visibility = showMirror ? Visibility.Visible : Visibility.Collapsed;
         MirrorBox.Text = defaultMirror;
         ProjectNameBox.Text = string.Empty;
-        EditorPrimaryBtn.Content = _editingProject is null ? "部署" : "保存";
+        EditorPrimaryBtn.Content = _editingProject is null
+            ? L.Get("ComposePage.DeployAction")
+            : L.Get("ComposePage.SaveButton");
         ListPanel.Visibility = Visibility.Collapsed;
         EditorPanel.Visibility = Visibility.Visible;
     }
@@ -263,7 +268,7 @@ public sealed partial class ComposePage : Page
         }
         catch (Exception ex)
         {
-            EditorPathText.Text = $"读取文件失败：{ex.Message}";
+            EditorPathText.Text = L.GetFormat("ComposePage.ReadFileFailed", ex.Message);
         }
     }
 
@@ -271,34 +276,38 @@ public sealed partial class ComposePage : Page
     {
         EditorBox.Document.GetText(TextGetOptions.None, out var content);
 
+        var noFilePlaceholder = L.Get("ComposePage.NoFileSelected");
         if (_editingProject is null)
         {
             var mirror = string.IsNullOrWhiteSpace(MirrorBox.Text) ? null : MirrorBox.Text.Trim();
             var projectName = string.IsNullOrWhiteSpace(ProjectNameBox.Text) ? null : ProjectNameBox.Text.Trim();
             var path = EditorPathText.Text;
-            var hasPath = !string.IsNullOrEmpty(path) && !path.StartsWith("未选择", StringComparison.Ordinal);
+            var hasPath = !string.IsNullOrEmpty(path)
+                && !string.Equals(path, noFilePlaceholder, StringComparison.Ordinal);
             HideEditor();
-            await ShowProgressAsync("Compose 部署", async progress =>
+            await ShowProgressAsync(L.Get("ComposePage.DeployProgressTitle"), async progress =>
             {
                 var results = await ViewModel.DeployFromContentAsync(content, hasPath ? path : null, projectName, progress, mirror);
                 return string.Join(Environment.NewLine,
-                    results.Select(r => r.Success
-                        ? $"部署成功  {r.ContainerName}  {r.Error}"
-                        : $"部署失败  {r.ContainerName}  {r.Error}"));
+                    results.Select(r => L.GetFormat(
+                        r.Success ? "ComposePage.DeployResultOk" : "ComposePage.DeployResultFail",
+                        r.ContainerName, r.Error)));
             });
         }
         else
         {
             var project = _editingProject;
             var targetPath = string.IsNullOrEmpty(project.FilePath)
-                ? (EditorPathText.Text.StartsWith("未选择", StringComparison.Ordinal) ? null : EditorPathText.Text)
+                ? (string.Equals(EditorPathText.Text, noFilePlaceholder, StringComparison.Ordinal)
+                    ? null
+                    : EditorPathText.Text)
                 : project.FilePath;
             var saved = await ViewModel.SaveProjectFileAsync(targetPath, content);
             HideEditor();
-            await ShowInfoAsync(saved ? "已保存" : "保存失败",
+            await ShowInfoAsync(saved ? L.Get("ComposePage.SavedTitle") : L.Get("ComposePage.SaveFailedTitle"),
                 saved
-                    ? $"{Path.GetFileName(targetPath ?? string.Empty)} 已更新。如需应用变更，请先停止项目再重新部署。"
-                    : "无法写入 compose 文件。");
+                    ? L.GetFormat("ComposePage.SavedDetailFormat", Path.GetFileName(targetPath ?? string.Empty))
+                    : L.Get("ComposePage.CannotWriteFile"));
         }
     }
 
@@ -309,12 +318,12 @@ public sealed partial class ComposePage : Page
 
     private async Task ShowProgressAsync(string title, Func<IProgress<string>, Task<string>> run)
     {
-        var statusText = new TextBlock { Text = "执行中..." };
+        var statusText = new TextBlock { Text = L.Get("ComposePage.ProgressRunning") };
         var dialog = new ContentDialog
         {
             Title = title,
             Content = statusText,
-            CloseButtonText = "完成",
+            CloseButtonText = L.Get("ComposePage.DoneButton"),
             DefaultButton = ContentDialogButton.Close,
             XamlRoot = XamlRoot,
         };
@@ -326,11 +335,11 @@ public sealed partial class ComposePage : Page
         }
         catch (OperationCanceledException)
         {
-            statusText.Text = "已取消";
+            statusText.Text = L.Get("ComposePage.Cancelled");
         }
         catch (Exception ex)
         {
-            statusText.Text = $"操作失败：{ex.Message}";
+            statusText.Text = L.GetFormat("ComposePage.OperationFailed", ex.Message);
         }
         await showTask;
     }
@@ -341,7 +350,7 @@ public sealed partial class ComposePage : Page
         {
             Title = mainText,
             Content = detail,
-            CloseButtonText = "关闭",
+            CloseButtonText = L.Get("ComposePage.CloseButton"),
             DefaultButton = ContentDialogButton.Close,
             XamlRoot = XamlRoot,
         };

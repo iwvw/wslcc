@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using WSLCC.Core.Services;
+using WSLCC_App;
 
 namespace WSLCC.App.ViewModels;
 
@@ -73,6 +74,7 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty]
     public partial string CloseBehavior { get; set; }
 
+
     [ObservableProperty]
     public partial bool StartupEnabled { get; set; }
 
@@ -87,9 +89,9 @@ public partial class SettingsViewModel : ObservableObject
 
     public ObservableCollection<CloseBehaviorOption> CloseBehaviorOptions { get; } = new()
     {
-        new("ask", "关闭时询问（默认）"),
-        new("tray", "最小化到托盘"),
-        new("exit", "直接退出"),
+        new("ask", L.Get("Settings.CloseBehaviorAsk")),
+        new("tray", L.Get("Settings.CloseBehaviorTray")),
+        new("exit", L.Get("Settings.CloseBehaviorExit")),
     };
 
     public bool HasWslcAction => true;
@@ -111,7 +113,7 @@ public partial class SettingsViewModel : ObservableObject
         ErrorMessage = string.Empty;
         WslcCurrentVersion = "-";
         WslcLatestVersion = "-";
-        WslcActionText = "检查更新";
+        WslcActionText = L.Get("Settings.CheckWslcButtonAction");
         WslcActionMessage = string.Empty;
         CloseBehavior = "ask";
     }
@@ -126,24 +128,24 @@ public partial class SettingsViewModel : ObservableObject
 
     private async Task CheckWslcAsync()
     {
-        WslcActionMessage = "正在检测…";
+        WslcActionMessage = L.Get("Settings.Checking");
         var info = await _host.Install.GetStatusAsync();
-        WslcCurrentVersion = info.WslcInstalled ? info.CurrentWslcVersion! : "未检测到";
-        WslcLatestVersion = info.LatestWslVersion ?? "查询失败";
+        WslcCurrentVersion = info.WslcInstalled ? info.CurrentWslcVersion! : L.Get("Settings.NotDetected");
+        WslcLatestVersion = info.LatestWslVersion ?? L.Get("Settings.QueryFailed");
         if (info.HasUpdate)
         {
-            WslcActionText = "立即升级";
-            WslcActionMessage = "发现新版本，可一键升级（会请求管理员权限）";
+            WslcActionText = L.Get("Settings.WslcActionUpgrade");
+            WslcActionMessage = L.Get("Settings.UpdateAvailable");
         }
         else if (!info.WslcInstalled)
         {
-            WslcActionText = "一键安装";
-            WslcActionMessage = "未检测到 wslc，可一键安装 WSL（会请求管理员权限）";
+            WslcActionText = L.Get("Settings.WslcActionInstall");
+            WslcActionMessage = L.Get("Settings.WslcNotInstalled");
         }
         else
         {
-            WslcActionText = "重新检测";
-            WslcActionMessage = info.Error is not null ? $"检测失败：{info.Error}" : "已是最新版本";
+            WslcActionText = L.Get("Settings.WslcActionRecheck");
+            WslcActionMessage = info.Error is not null ? L.GetFormat("Settings.CheckFailed", info.Error) : L.Get("Settings.UpToDate");
         }
     }
 
@@ -193,7 +195,7 @@ public partial class SettingsViewModel : ObservableObject
             MicaEnabled = enabled;
             await _host.Settings.SetMicaEnabledAsync(enabled);
             global::WSLCC_App.App.Main?.ApplyBackdrop(enabled);
-            SaveMessage = "背景效果已应用";
+            SaveMessage = L.Get("Settings.MicaApplied");
             HasSaveMessage = true;
         }
         catch (Exception ex)
@@ -219,9 +221,9 @@ public partial class SettingsViewModel : ObservableObject
             await _host.Settings.SetCloseBehaviorAsync(CloseBehavior);
             _host.Startup.SetEnabled(StartupEnabled);
             await _host.Settings.SetStartupContainersEnabledAsync(StartupContainersEnabled);
-            await _host.Settings.SetAutoCheckUpdateEnabledAsync(AutoCheckUpdate);
+await _host.Settings.SetAutoCheckUpdateEnabledAsync(AutoCheckUpdate);
             await _host.Settings.SetMinimizeNotifyEnabledAsync(MinimizeTrayNotify);
-            SaveMessage = "设置已保存";
+            SaveMessage = L.Get("Settings.Saved");
             HasSaveMessage = true;
         }
         catch (Exception ex)

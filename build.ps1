@@ -25,3 +25,11 @@ if (-not (Test-Path $out)) {
     $out = Join-Path $PSScriptRoot "src\WSLCC.App\bin\$Configuration\net10.0-windows10.0.26100.0\win-$Platform\WSLCC.exe"
 }
 Write-Host "构建成功。产物: $out" -ForegroundColor Green
+
+# 清理多余语言资源目录（WinUI 自包含默认输出 100+ 区域，仅保留中英文）
+$outDir = Split-Path $out -Parent
+$keep = @("en-us", "en-US", "en-GB", "zh-CN", "zh-Hans", "zh-Hant", "zh-TW")
+Get-ChildItem $outDir -Directory | Where-Object {
+    $_.Name -match "^[a-z]{2,3}(-[A-Za-z]{2,8}){0,2}$" -and $_.Name -notin $keep
+} | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+Write-Host "已裁剪语言资源，保留: $($keep -join ', ')" -ForegroundColor DarkGray

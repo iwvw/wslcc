@@ -2,6 +2,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using WSLCC.App.ViewModels;
 using WSLCC.Core.Services;
+using WSLCC_App;
 
 namespace WSLCC.App.Pages;
 
@@ -22,10 +23,10 @@ public sealed partial class ImagesPage : Page
         if (sender is not FrameworkElement { DataContext: ImageItemViewModel image }) return;
         var confirm = new ContentDialog
         {
-            Title = "删除镜像",
-            Content = $"确定删除镜像「{image.Source.FullName}」吗？该操作不可撤销。",
-            PrimaryButtonText = "删除",
-            CloseButtonText = "取消",
+            Title = L.Get("ImagesPage.DeleteImageTitle"),
+            Content = L.GetFormat("ImagesPage.DeleteImageConfirm", image.Source.FullName),
+            PrimaryButtonText = L.Get("ImagesPage.DeleteAction"),
+            CloseButtonText = L.Get("ImagesPage.CancelButton"),
             DefaultButton = ContentDialogButton.Close,
             XamlRoot = XamlRoot,
         };

@@ -22,6 +22,7 @@ public sealed partial class SkeletonGrid : UserControl
     public SkeletonGrid()
     {
         InitializeComponent();
+        Visibility = IsActive ? Visibility.Visible : Visibility.Collapsed;
         Loaded += (_, _) => { if (IsActive) StartPulse(); };
         Unloaded += (_, _) => StopPulse();
     }

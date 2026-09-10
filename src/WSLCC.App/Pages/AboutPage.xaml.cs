@@ -3,6 +3,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media.Imaging;
 using WSLCC.Core.Services;
+using WSLCC_App;
 
 namespace WSLCC.App.Pages;
 
@@ -11,7 +12,7 @@ public sealed partial class AboutPage : Page
     public AboutPage()
     {
         InitializeComponent();
-        VersionText.Text = $"版本 {GetVersion()}";
+        VersionText.Text = L.GetFormat("About.Version", GetVersion());
         Loaded += OnLoaded;
     }
 
@@ -55,7 +56,7 @@ public sealed partial class AboutPage : Page
     private async void CheckUpdate_Click(object sender, RoutedEventArgs e)
     {
         CheckUpdateButton.IsEnabled = false;
-        UpdateStatusText.Text = "检查中…";
+        UpdateStatusText.Text = L.Get("About.Checking");
         var info = await WslcHost.Default.Update.CheckAsync();
         ApplyUpdateBanner(info);
         CheckUpdateButton.IsEnabled = true;
@@ -65,14 +66,14 @@ public sealed partial class AboutPage : Page
     {
         if (info.Error is not null)
         {
-            UpdateStatusText.Text = $"检查失败：{info.Error}";
+            UpdateStatusText.Text = L.GetFormat("About.CheckFailed", info.Error);
             UpdateBar.IsOpen = false;
             return;
         }
 
         if (info.HasUpdate)
         {
-            UpdateStatusText.Text = $"发现新版本 v{info.LatestVersion}";
+            UpdateStatusText.Text = L.GetFormat("About.NewVersionFound", info.LatestVersion);
             UpdateBar.IsOpen = true;
             if (info.ReleaseUrl is not null)
                 ReleaseLink.NavigateUri = new Uri(info.ReleaseUrl);
@@ -81,8 +82,8 @@ public sealed partial class AboutPage : Page
 
         UpdateBar.IsOpen = false;
         UpdateStatusText.Text = info.LatestVersion is null
-            ? "暂无发布版本信息"
-            : $"已是最新版本（v{info.LatestVersion}）";
+            ? L.Get("About.NoReleaseInfo")
+            : L.GetFormat("About.UpToDate", info.LatestVersion);
     }
 
     private async void DownloadUpdate_Click(object sender, RoutedEventArgs e)
@@ -90,25 +91,25 @@ public sealed partial class AboutPage : Page
         var info = WslcUpdateService.LastResult;
         if (info is null || !info.HasUpdate)
         {
-            UpdateStatusText.Text = "请先点击“检查更新”获取最新版本信息。";
+            UpdateStatusText.Text = L.Get("About.CheckUpdateFirst");
             return;
         }
 
         var confirm = new ContentDialog
         {
-            Title = "下载并更新",
-            Content = $"将下载 v{info.LatestVersion} 安装包并启动安装程序，过程中应用会退出，安装完成后可重新打开 WSLCC。",
-            PrimaryButtonText = "下载并更新",
-            CloseButtonText = "取消",
+            Title = L.Get("About.DownloadAndUpdate"),
+            Content = L.GetFormat("About.DownloadConfirm", info.LatestVersion),
+            PrimaryButtonText = L.Get("About.DownloadAndUpdate"),
+            CloseButtonText = L.Get("About.Cancel"),
             DefaultButton = ContentDialogButton.Close,
             XamlRoot = XamlRoot,
         };
         if (await confirm.ShowAsync() != ContentDialogResult.Primary) return;
 
         DownloadUpdateBtn.IsEnabled = false;
-        UpdateStatusText.Text = "正在下载安装包…";
+        UpdateStatusText.Text = L.Get("About.Downloading");
 
-        var progress = new Progress<double>(p => UpdateStatusText.Text = $"正在下载安装包… {p * 100:0}%");
+        var progress = new Progress<double>(p => UpdateStatusText.Text = L.GetFormat("About.DownloadingPercent", p * 100));
         var result = await WslcHost.Default.Update.DownloadAndInstallAsync(info.DownloadUrl, progress);
 
         if (result.Error is not null)
@@ -118,7 +119,7 @@ public sealed partial class AboutPage : Page
             return;
         }
 
-        UpdateStatusText.Text = "安装程序已启动，应用即将退出…";
+        UpdateStatusText.Text = L.Get("About.InstallerLaunched");
         await Task.Delay(500);
         global::WSLCC_App.App.Main?.ExitForUpdate();
     }

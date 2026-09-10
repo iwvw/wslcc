@@ -2,6 +2,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using WSLCC.App.ViewModels;
 using WSLCC.Core.Services;
+using WSLCC_App;
 
 namespace WSLCC.App.Pages;
 
@@ -22,10 +23,10 @@ public sealed partial class VolumesPage : Page
         if (sender is not FrameworkElement { DataContext: VolumeItemViewModel volume }) return;
         var confirm = new ContentDialog
         {
-            Title = "删除卷",
-            Content = $"确定删除数据卷「{volume.Source.Name}」吗？卷内数据将被清除。",
-            PrimaryButtonText = "删除",
-            CloseButtonText = "取消",
+            Title = L.Get("VolumesPage.DeleteVolumeTitle"),
+            Content = L.GetFormat("VolumesPage.DeleteVolumeConfirm", volume.Source.Name),
+            PrimaryButtonText = L.Get("VolumesPage.DeleteAction"),
+            CloseButtonText = L.Get("VolumesPage.CancelButton"),
             DefaultButton = ContentDialogButton.Close,
             XamlRoot = XamlRoot,
         };

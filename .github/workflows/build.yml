@@ -38,7 +38,14 @@ jobs:
 
       - name: Package zip
         shell: powershell
-        run: Compress-Archive -Path artifacts/publish/* -DestinationPath artifacts/WSLCC-win-x64.zip -Force
+        run: |
+          $publish = "artifacts/publish"
+          # 裁剪多余语言资源目录（仅保留中英文）
+          $keep = @("en-us", "en-US", "en-GB", "zh-CN", "zh-Hans", "zh-Hant", "zh-TW")
+          Get-ChildItem "$publish" -Directory | Where-Object {
+              $_.Name -match "^[a-z]{2,3}(-[A-Za-z]{2,8}){0,2}$" -and $_.Name -notin $keep
+          } | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+          Compress-Archive -Path "$publish/*" -DestinationPath artifacts/WSLCC-win-x64.zip -Force
 
       - name: Upload zip
         uses: actions/upload-artifact@v4

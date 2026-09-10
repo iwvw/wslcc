@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using WSLCC.Core.Models;
 using WSLCC.Core.Services;
+using WSLCC_App;
 
 namespace WSLCC.App.ViewModels;
 
@@ -68,6 +69,18 @@ public partial class HomeViewModel : ObservableObject
     public partial bool HasError { get; set; }
 
     [ObservableProperty]
+    public partial string StatusMessage { get; set; }
+
+    [ObservableProperty]
+    public partial bool HasStatus { get; set; }
+
+    [ObservableProperty]
+    public partial string NetworkWarningText { get; set; }
+
+    [ObservableProperty]
+    public partial bool HasNetworkWarning { get; set; }
+
+    [ObservableProperty]
     public partial string DatabasePath { get; set; }
 
     [ObservableProperty]
@@ -87,7 +100,7 @@ public partial class HomeViewModel : ObservableObject
     public ObservableCollection<string> GuidanceSteps { get; } = new();
 
     public string ContainerDetailText
-        => $"{RunningContainersCount} 运行 · {StoppedContainersCount} 停止";
+        => L.GetFormat("Home.ContainerDetail", RunningContainersCount, StoppedContainersCount);
 
     partial void OnRunningContainersCountChanged(string value)
         => OnPropertyChanged(nameof(ContainerDetailText));
@@ -104,7 +117,7 @@ public partial class HomeViewModel : ObservableObject
         SettingsFile = "-";
         SessionManagerVersion = "-";
         ActiveSessions = "-";
-        MissingComponents = "未知";
+        MissingComponents = L.Get("Home.Unknown");
         ApiStatus = "-";
         ImagesCount = "-";
         ContainersCount = "-";
@@ -113,7 +126,7 @@ public partial class HomeViewModel : ObservableObject
         QuotaCpu = "-";
         QuotaMemory = "-";
         QuotaStorage = "-";
-        TodayText = DateTime.Today.ToString("yyyy年M月d日 dddd", System.Globalization.CultureInfo.GetCultureInfo("zh-CN"));
+        TodayText = L.GetFormat("Home.TodayText", DateTime.Today);
         DatabasePath = "-";
         AuditCount = "-";
         PullCount = "-";
@@ -127,12 +140,19 @@ public partial class HomeViewModel : ObservableObject
         IsLoading = true;
         HasError = false;
         HasGuidance = false;
+        HasStatus = false;
+        StatusMessage = "";
+        var tunInterfaces = WslcNetworkDiagnostics.DetectProxyTunInterfaces();
+        HasNetworkWarning = tunInterfaces.Count > 0;
+        NetworkWarningText = HasNetworkWarning
+            ? L.GetFormat("Home.NetworkWarning", string.Join(L.Get("Home.NetworkInterfaceSeparator"), tunInterfaces))
+            : "";
         try
         {
             var info = await _host.Environment.GetEnvironmentAsync();
             if (info.Client is null && info.Server is null)
             {
-                ErrorMessage = "未获取到 wslc 环境信息，可能会话未启动或 wslc 未安装。";
+                ErrorMessage = L.Get("Home.EnvUnavailable");
                 HasError = true;
                 BuildGuidance(ErrorMessage);
             }
@@ -153,8 +173,8 @@ public partial class HomeViewModel : ObservableObject
             }
 
             var componentsOk = info.MissingComponents.Count == 0;
-            MissingComponents = componentsOk ? "组件齐全" : string.Join(", ", info.MissingComponents);
-            ApiStatus = info.ApiAvailable ? "可用（原生 API）" : "不可用（当前使用 CLI 通道）";
+            MissingComponents = componentsOk ? L.Get("Home.ComponentsReady") : string.Join(", ", info.MissingComponents);
+            ApiStatus = info.ApiAvailable ? L.Get("Home.ApiStatusNative") : L.Get("Home.ApiStatusCli");
 
             DatabasePath = _host.Database.DatabasePath;
             AuditCount = (await _host.Audit.CountAsync()).ToString();
@@ -198,19 +218,19 @@ public partial class HomeViewModel : ObservableObject
             || text.Contains("refused", StringComparison.OrdinalIgnoreCase);
 
         GuidanceSteps.Add(missingWslc
-            ? "未检测到 wslc 命令：请先安装微软 WSL 容器 CLI（WSL 容器文档中可查看安装方式）"
-            : "确认 wslc 已安装并在 PATH 中，命令行执行 wslc --version 验证");
+            ? L.Get("Home.GuidanceMissingWslc")
+            : L.Get("Home.GuidanceConfirmWslc"));
 
-        GuidanceSteps.Add("启动会话：执行 wslc session start；若之前执行过 wsl --shutdown，需要重新启动 WSL");
+        GuidanceSteps.Add(L.Get("Home.GuidanceStartSession"));
 
         GuidanceSteps.Add(sessionIssue
-            ? "会话反复启动失败时，检查是否开启了代理软件的 TUN 模式（如 mihomo/Clash），关闭 TUN 后重试"
-            : "若反复失败，检查是否有代理软件占用虚拟网卡（TUN 模式），关闭后重试");
+            ? L.Get("Home.GuidanceTunMode")
+            : L.Get("Home.GuidanceTunFallback"));
 
         if (networkIssue)
-            GuidanceSteps.Add("网络异常时检查镜像加速配置：设置页面确认使用可用镜像源（如 docker.1panel.live）");
+            GuidanceSteps.Add(L.Get("Home.GuidanceNetwork"));
 
-        GuidanceSteps.Add("完成上述检查后，点击右上角“刷新”重试，或重启应用");
+        GuidanceSteps.Add(L.Get("Home.GuidanceRetry"));
 
         HasGuidance = true;
     }
@@ -220,7 +240,12 @@ public partial class HomeViewModel : ObservableObject
         try
         {
             await _host.System.TerminateSessionsAsync();
+            var ready = await WaitForSessionReadyAsync();
             await LoadAsync();
+            StatusMessage = ready
+                ? L.Get("Home.TerminateReady")
+                : L.Get("Home.TerminateSlow");
+            HasStatus = true;
         }
         catch (Exception ex)
         {
@@ -234,14 +259,37 @@ public partial class HomeViewModel : ObservableObject
         try
         {
             await _host.System.TerminateSessionsAsync();
-            await Task.Delay(TimeSpan.FromSeconds(3));
+            var ready = await WaitForSessionReadyAsync();
             await LoadAsync();
+            StatusMessage = ready
+                ? L.Get("Home.RestartReady")
+                : L.Get("Home.RestartRecovering");
+            HasStatus = true;
         }
         catch (Exception ex)
         {
             ErrorMessage = ex.Message;
             HasError = true;
         }
+    }
+
+    private async Task<bool> WaitForSessionReadyAsync()
+    {
+        var deadline = DateTime.UtcNow.AddSeconds(30);
+        while (DateTime.UtcNow < deadline)
+        {
+            try
+            {
+                var env = await _host.Environment.GetEnvironmentAsync();
+                if (env.Server is { Sessions.Count: > 0 })
+                    return true;
+            }
+            catch
+            {
+            }
+            await Task.Delay(2000);
+        }
+        return false;
     }
 
     private async Task LoadCountsAsync()

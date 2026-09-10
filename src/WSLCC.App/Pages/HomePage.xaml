@@ -42,13 +42,28 @@
                 </StackPanel>
             </Grid>
 
-<InfoBar
-                Grid.Row="1"
-                IsClosable="True"
-                IsOpen="{x:Bind ViewModel.HasError, Mode=OneWay}"
-                Message="{x:Bind ViewModel.ErrorMessage, Mode=OneWay}"
-                Severity="Error"
-                Title="操作失败" />
+<StackPanel Grid.Row="1" Spacing="8">
+                <InfoBar
+                    IsClosable="True"
+                    IsOpen="{x:Bind ViewModel.HasError, Mode=OneWay}"
+                    Message="{x:Bind ViewModel.ErrorMessage, Mode=OneWay}"
+                    Severity="Error"
+                    Title="操作失败" />
+
+                <InfoBar
+                    IsClosable="True"
+                    IsOpen="{x:Bind ViewModel.HasStatus, Mode=OneWay}"
+                    Message="{x:Bind ViewModel.StatusMessage, Mode=OneWay}"
+                    Severity="Success"
+                    Title="完成" />
+
+                <InfoBar
+                    IsClosable="True"
+                    IsOpen="{x:Bind ViewModel.HasNetworkWarning, Mode=OneWay}"
+                    Message="{x:Bind ViewModel.NetworkWarningText, Mode=OneWay}"
+                    Severity="Warning"
+                    Title="网络环境警告" />
+            </StackPanel>
 
             <Border
                 Grid.Row="2"

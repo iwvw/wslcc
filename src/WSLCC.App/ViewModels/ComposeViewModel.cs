@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using WSLCC.Core.Services;
+using WSLCC_App;
 
 namespace WSLCC.App.ViewModels;
 
@@ -17,13 +18,15 @@ public sealed partial class ComposeProjectItemViewModel : ObservableObject
 
     public bool HasFilePath => !string.IsNullOrEmpty(Source.FilePath);
 
-    public string Summary => $"{Source.RunningCount}/{Source.Services.Count} 个服务运行中";
+    public string Summary => L.GetFormat("ComposePage.Summary", Source.RunningCount, Source.Services.Count);
 
     public bool HasMissing => Source.Services.Any(s => s.IsMissing);
 
     public bool IsAllStopped => Source.RunningCount == 0;
 
-    public string PrimaryActionText => IsAllStopped ? "启动项目" : "停止项目";
+    public string PrimaryActionText => IsAllStopped
+        ? L.Get("ComposePage.ActionStartProject")
+        : L.Get("ComposePage.ActionStopProject");
 
     public string ServicesText => string.Join(Environment.NewLine,
         Source.Services.Select(s => $"{s.ContainerName}  [{s.State}]  {s.Status}"));
