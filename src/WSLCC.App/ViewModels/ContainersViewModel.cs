@@ -198,6 +198,34 @@ public partial class ContainersViewModel : ObservableObject
         }
     }
 
+    public async Task CopyFilesAsync(string source, string target)
+    {
+        try
+        {
+            await _containers.CopyAsync(source, target);
+        }
+        catch (Exception ex)
+        {
+            ShowError(ex);
+            throw;
+        }
+    }
+
+    public async Task<string?> PruneStoppedAsync()
+    {
+        try
+        {
+            var output = await WslcHost.Default.Prune.PruneContainersAsync();
+            await LoadAsync();
+            return output;
+        }
+        catch (Exception ex)
+        {
+            ShowError(ex);
+            return null;
+        }
+    }
+
     private async Task ExecuteContainerOpAsync(
         ContainerItemViewModel item, Func<ContainerItemViewModel, Task> operation)
     {

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <Page
-    x:Class="WSLCC.App.Pages.VolumesPage"
+    x:Class="WSLCC.App.Pages.NetworksPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -8,7 +8,7 @@
     xmlns:vm="using:WSLCC.App.ViewModels"
     xmlns:controls="using:WSLCC.App.Controls"
     mc:Ignorable="d"
-    x:DataType="vm:VolumesViewModel">
+    x:DataType="vm:NetworksViewModel">
 
     <Grid Padding="32,24,32,24" RowSpacing="16">
         <Grid.RowDefinitions>
@@ -22,24 +22,21 @@
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
-            <StackPanel Spacing="2">
-                <TextBlock Style="{StaticResource TitleTextBlockStyle}" Text="卷" />
+            <StackPanel VerticalAlignment="Center">
+                <TextBlock Style="{StaticResource TitleTextBlockStyle}" Text="网络" />
                 <TextBlock
                     Style="{StaticResource CaptionTextBlockStyle}"
                     Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                    Text="Docker 数据卷管理" />
+                    Text="Docker 网络管理" />
             </StackPanel>
             <StackPanel
                 Grid.Column="1"
                 Orientation="Horizontal"
                 Spacing="8"
                 VerticalAlignment="Center">
-                <Button
-                    Click="Prune_Click"
-                    Content="清理未使用" />
-                <Button
-                    Command="{x:Bind ViewModel.RefreshCommand}"
-                    Content="刷新" />
+                <Button Command="{x:Bind ViewModel.RefreshCommand}" Content="刷新" />
+                <Button Click="Prune_Click" Content="清理未使用" />
+                <Button Click="Create_Click" Content="新建网络" />
             </StackPanel>
         </Grid>
 
@@ -60,57 +57,72 @@
                     Style="{StaticResource BodyTextBlockStyle}"
                     Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                     IsHitTestVisible="False"
-                    Text="暂无数据卷"
-                    Visibility="{x:Bind ViewModel.HasVolumes, Converter={StaticResource InverseBoolToVis}, Mode=OneWay}" />
+                    Text="暂无网络"
+                    Visibility="{x:Bind ViewModel.HasNetworks, Converter={StaticResource InverseBoolToVis}, Mode=OneWay}" />
+
                 <ListView
-                    ItemsSource="{x:Bind ViewModel.Volumes, Mode=OneWay}"
+                    ItemsSource="{x:Bind ViewModel.Networks, Mode=OneWay}"
                     SelectionMode="None"
-                    Visibility="{x:Bind ViewModel.HasVolumes, Converter={StaticResource BoolToVis}, Mode=OneWay}">
+                    Visibility="{x:Bind ViewModel.HasNetworks, Converter={StaticResource BoolToVis}, Mode=OneWay}">
                     <ListView.ItemContainerStyle>
                         <Style TargetType="ListViewItem">
                             <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-                            <Setter Property="Padding" Value="0,2" />
-                            <Setter Property="MinHeight" Value="0" />
+                            <Setter Property="Padding" Value="4" />
                         </Style>
                     </ListView.ItemContainerStyle>
                     <ListView.ItemTemplate>
-                        <DataTemplate x:DataType="vm:VolumeItemViewModel">
+                        <DataTemplate x:DataType="vm:NetworkItemViewModel">
                             <Border
-                                Padding="16,12"
+                                Padding="14,10"
                                 Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                                 BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                                 BorderThickness="1"
-                                CornerRadius="8">
-                                <Grid ColumnSpacing="16">
+                                CornerRadius="6">
+                                <Grid ColumnSpacing="12">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
-                                    <StackPanel Spacing="6">
-                                        <StackPanel Orientation="Horizontal" Spacing="12">
-                                            <TextBlock Style="{StaticResource BodyStrongTextBlockStyle}" Text="{x:Bind Name}" />
-                                            <TextBlock
-                                                VerticalAlignment="Center"
-                                                Style="{StaticResource CaptionTextBlockStyle}"
-                                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                                Text="{x:Bind Driver}" />
-                                        </StackPanel>
+                                    <StackPanel Spacing="2">
+                                        <TextBlock
+                                            Style="{StaticResource BodyStrongTextBlockStyle}"
+                                            Text="{x:Bind Name}" />
                                         <TextBlock
                                             Style="{StaticResource CaptionTextBlockStyle}"
                                             Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                            IsTextSelectionEnabled="True"
-                                            TextTrimming="CharacterEllipsis"
-                                            Text="{x:Bind Mountpoint}" />
+                                            Text="{x:Bind Driver}" />
+                                        <TextBlock
+                                            Style="{StaticResource CaptionTextBlockStyle}"
+                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                            Text="{x:Bind Id}" />
                                     </StackPanel>
-                                    <Button
+                                    <StackPanel
                                         Grid.Column="1"
-                                        VerticalAlignment="Center"
-                                        MinWidth="0" MinHeight="0"
-                                        Padding="8,3"
-                                        Foreground="{ThemeResource SystemFillColorCriticalBrush}"
-                                        Click="VolumeAction_Click"
-                                        Content="删除"
-                                        Tag="{x:Bind}" />
+                                        Orientation="Horizontal"
+                                        Spacing="4"
+                                        VerticalAlignment="Center">
+                                        <Button
+                                            MinWidth="0" MinHeight="0" Padding="6,3"
+                                            Click="NetworkAction_Click"
+                                            Content="详情"
+                                            Tag="inspect" />
+                                        <Button
+                                            MinWidth="0" MinHeight="0" Padding="6,3"
+                                            Click="NetworkAction_Click"
+                                            Content="连接容器"
+                                            Tag="connect" />
+                                        <Button
+                                            MinWidth="0" MinHeight="0" Padding="6,3"
+                                            Click="NetworkAction_Click"
+                                            Content="断开"
+                                            Tag="disconnect" />
+                                        <Button
+                                            MinWidth="0" MinHeight="0" Padding="6,3"
+                                            Foreground="{ThemeResource SystemFillColorCriticalBrush}"
+                                            Click="NetworkAction_Click"
+                                            Content="删除"
+                                            Tag="delete" />
+                                    </StackPanel>
                                 </Grid>
                             </Border>
                         </DataTemplate>

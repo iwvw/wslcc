@@ -35,6 +35,12 @@
                 Orientation="Horizontal"
                 Spacing="8"
                 VerticalAlignment="Center">
+                <CheckBox
+                    Content="显示中间层镜像（--all）"
+                    IsChecked="{x:Bind ViewModel.ShowIntermediate, Mode=TwoWay}" />
+                <Button
+                    Click="Prune_Click"
+                    Content="清理未使用" />
                 <Button
                     Command="{x:Bind ViewModel.RefreshCommand}"
                     Content="刷新" />
@@ -127,15 +133,25 @@
                                         Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                         Text="{x:Bind CreatedAt}" />
                                 </StackPanel>
-                                <Button
-                                Grid.Column="1"
-                                VerticalAlignment="Center"
-                                MinWidth="0" MinHeight="0"
-                                Padding="8,3"
-                                Foreground="{ThemeResource SystemFillColorCriticalBrush}"
-                                Click="ImageAction_Click"
-                                Content="删除"
-                                Tag="{x:Bind}" />
+                                <StackPanel
+                                    Grid.Column="1"
+                                    Orientation="Horizontal"
+                                    Spacing="4"
+                                    VerticalAlignment="Center">
+                                    <Button
+                                        MinWidth="0" MinHeight="0"
+                                        Padding="8,3"
+                                        Click="ImageAction_Click"
+                                        Content="详情"
+                                        Tag="inspect" />
+                                    <Button
+                                        MinWidth="0" MinHeight="0"
+                                        Padding="8,3"
+                                        Foreground="{ThemeResource SystemFillColorCriticalBrush}"
+                                        Click="ImageAction_Click"
+                                        Content="删除"
+                                        Tag="delete" />
+                                </StackPanel>
                             </Grid>
                         </Border>
                     </DataTemplate>

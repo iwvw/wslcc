@@ -12,6 +12,10 @@ param(
 $ErrorActionPreference = "Stop"
 
 $project = Join-Path $PSScriptRoot "src\WSLCC.App\WSLCC.App.csproj"
+
+# Microsoft.WSL.Containers 只随 microsoft/WSL 的 GitHub Release 发布，需先取到本地源
+& (Join-Path $PSScriptRoot "scripts\fetch-wslc-sdk.ps1")
+
 Write-Host "==> dotnet build WSLCC ($Configuration|$Platform)"
 dotnet build $project -c $Configuration -p:Platform=$Platform -p:RuntimeIdentifier=win-$Platform -v:m
 

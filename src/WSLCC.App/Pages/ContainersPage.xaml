@@ -35,6 +35,12 @@
                     Command="{x:Bind ViewModel.RefreshCommand}"
                     Content="刷新" />
                 <Button
+                    Click="PruneStopped_Click"
+                    Content="清理已停止" />
+                <Button
+                    Click="CopyFiles_Click"
+                    Content="复制文件" />
+                <Button
                     Click="NewContainer_Click"
                     Content="新建" />
             </StackPanel>

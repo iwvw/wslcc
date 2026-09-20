@@ -5,9 +5,16 @@ using YamlDotNet.RepresentationModel;
 
 namespace WSLCC.Core.Services;
 
+public sealed record WslcLogOptions(
+    int? Tail = null,
+    bool Timestamps = false,
+    bool Details = false,
+    string? Since = null,
+    string? Until = null);
+
 public interface IWslcLogService
 {
-    Task<string> GetLogsAsync(string nameOrId, CancellationToken ct = default);
+    Task<string> GetLogsAsync(string nameOrId, WslcLogOptions? options = null, CancellationToken ct = default);
 }
 
 public sealed class WslcLogService : IWslcLogService
@@ -16,20 +23,31 @@ public sealed class WslcLogService : IWslcLogService
 
     public WslcLogService(WslcRunner runner) => _runner = runner;
 
-    public Task<string> GetLogsAsync(string nameOrId, CancellationToken ct = default)
-        => GetCleanLogsAsync(nameOrId, ct);
+    public Task<string> GetLogsAsync(string nameOrId, WslcLogOptions? options = null, CancellationToken ct = default)
+        => GetCleanLogsAsync(nameOrId, options, ct);
 
-    private async Task<string> GetCleanLogsAsync(string nameOrId, CancellationToken ct)
+    private async Task<string> GetCleanLogsAsync(string nameOrId, WslcLogOptions? options, CancellationToken ct)
     {
+        var args = new List<string> { "logs" };
+        if (options is not null)
+        {
+            if (options.Tail is int tail) { args.Add("-n"); args.Add(tail.ToString()); }
+            if (options.Timestamps) args.Add("--timestamps");
+            if (options.Details) args.Add("--details");
+            if (!string.IsNullOrWhiteSpace(options.Since)) { args.Add("--since"); args.Add(options.Since.Trim()); }
+            if (!string.IsNullOrWhiteSpace(options.Until)) { args.Add("--until"); args.Add(options.Until.Trim()); }
+        }
+        args.Add(nameOrId);
         var raw = await _runner.RunAsync(
-            ["logs", nameOrId], new WslcRunner.RunOptions(CheckOutputForErrors: false), ct).ConfigureAwait(false);
+            args, new WslcRunner.RunOptions(CheckOutputForErrors: false), ct).ConfigureAwait(false);
         return AnsiText.Strip(raw);
     }
 }
 
 public interface IWslcInspectService
 {
-    Task<string> InspectContainerAsync(string nameOrId, CancellationToken ct = default);
+    Task<string> InspectContainerAsync(string nameOrId, bool includeSize = false, CancellationToken ct = default);
+    Task<string> InspectImageAsync(string nameOrId, CancellationToken ct = default);
 }
 
 public sealed class WslcInspectService : IWslcInspectService
@@ -38,8 +56,11 @@ public sealed class WslcInspectService : IWslcInspectService
 
     public WslcInspectService(WslcRunner runner) => _runner = runner;
 
-    public Task<string> InspectContainerAsync(string nameOrId, CancellationToken ct = default)
-        => _runner.RunAsync(["inspect", nameOrId], ct: ct);
+    public Task<string> InspectContainerAsync(string nameOrId, bool includeSize = false, CancellationToken ct = default)
+        => _runner.RunAsync(includeSize ? ["inspect", "-s", nameOrId] : ["inspect", nameOrId], ct: ct);
+
+    public Task<string> InspectImageAsync(string nameOrId, CancellationToken ct = default)
+        => _runner.RunAsync(["image", "inspect", nameOrId], ct: ct);
 }
 
 public interface IWslcSystemService
@@ -52,8 +73,13 @@ public interface IWslcSystemService
 public sealed class WslcSystemService : IWslcSystemService
 {
     private readonly WslcRunner _runner;
+    private readonly IWslcSettingsFileService _settingsFile;
 
-    public WslcSystemService(WslcRunner runner) => _runner = runner;
+    public WslcSystemService(WslcRunner runner, IWslcSettingsFileService settingsFile)
+    {
+        _runner = runner;
+        _settingsFile = settingsFile;
+    }
 
     public async Task<IReadOnlyList<WslcSessionInfo>> ListSessionsAsync(CancellationToken ct = default)
     {
@@ -77,54 +103,17 @@ public sealed class WslcSystemService : IWslcSystemService
 
     public async Task<ResourceQuota> GetResourceQuotaAsync(CancellationToken ct = default)
     {
-        var cpu = "全部核心";
-        var memory = string.Empty;
-        var storage = "1 TB";
-
-        try
-        {
-            var settingsPath = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "wslc", "settings.yaml");
-            if (File.Exists(settingsPath))
-            {
-                var yaml = new YamlStream();
-                using var reader = new StreamReader(settingsPath);
-                yaml.Load(reader);
-                if (yaml.Documents.Count > 0
-                    && yaml.Documents[0].RootNode is YamlMappingNode root
-                    && root.Children.TryGetValue(new YamlScalarNode("session"), out var sessionNode)
-                    && sessionNode is YamlMappingNode session)
-                {
-                    var configuredCpu = GetScalar(session, "cpuCount");
-                    if (!string.IsNullOrEmpty(configuredCpu) && configuredCpu != "default")
-                        cpu = configuredCpu;
-                    var configuredMemory = GetScalar(session, "memorySize");
-                    if (!string.IsNullOrEmpty(configuredMemory) && configuredMemory != "default")
-                        memory = configuredMemory;
-                    var configuredStorage = GetScalar(session, "maxStorageSize");
-                    if (!string.IsNullOrEmpty(configuredStorage) && configuredStorage != "default")
-                        storage = configuredStorage;
-                }
-            }
-        }
-        catch
-        {
-        }
-
-        if (string.IsNullOrEmpty(memory))
-        {
-            var totalGb = GetTotalPhysicalMemoryGb();
-            memory = $"物理内存一半（约 {Math.Max(totalGb / 2, 1)} GB）";
-        }
-
+        var settings = _settingsFile.Read();
+        var cpu = string.IsNullOrEmpty(settings.CpuCount) || settings.CpuCount == WslcSettingsFileService.DefaultSentinel
+            ? "全部核心"
+            : settings.CpuCount;
+        var storage = string.IsNullOrEmpty(settings.MaxStorageSize) || settings.MaxStorageSize == WslcSettingsFileService.DefaultSentinel
+            ? "1 TB"
+            : settings.MaxStorageSize;
+        var memory = string.IsNullOrEmpty(settings.MemorySize) || settings.MemorySize == WslcSettingsFileService.DefaultSentinel
+            ? $"物理内存一半（约 {Math.Max(GetTotalPhysicalMemoryGb() / 2, 1)} GB）"
+            : settings.MemorySize;
         return new ResourceQuota(cpu, memory, storage);
-    }
-
-    private static string? GetScalar(YamlMappingNode map, string key)
-    {
-        if (!map.Children.TryGetValue(new YamlScalarNode(key), out var node)) return null;
-        return node is YamlScalarNode scalar ? scalar.Value : null;
     }
 
     private static long GetTotalPhysicalMemoryGb()

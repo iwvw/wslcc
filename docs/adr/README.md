@@ -12,3 +12,4 @@
 | 0006 | CLI JSON 输出解析采用多候选字段容错策略 | Accepted |
 | 0007 | 构建使用 VS MSBuild（amd64）规避 XamlCompiler 中文环境 bug | Accepted |
 | 0008 | 部署采用 WindowsAppSDKSelfContained + WindowsPackageType=None | Accepted |
+| 0009 | 跟进官方 wslc 2.9.8–2.9.12 能力扩展 | Accepted |

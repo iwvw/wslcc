@@ -21,3 +21,9 @@ wslc 提供两条数据通路：命令行（wslc.exe，Docker 风格语法 + `--
 
 - 正面：应用在 wslc 可用的现实环境下可靠工作；API 稳定后可平滑切换。
 - 负面：CLI 输出解析依赖字段名（已用多候选容错缓解）；子进程调用有少量开销（对桌面交互可忽略）。
+
+## 后续（2026-09 复核）
+
+本机环境已升级至 WSL / wslc 2.9.12（仍为 pre-release），原先导致 API 抛 E_UNEXPECTED 的网络干扰场景未再复现。但官方文档仍明确标注 WSL Containers API 处于 preview 且可能发生破坏性变更，GA 目标为 2026 年秋季，因此本 ADR 的决策维持不变。
+
+SDK 包已跟进至 2.9.12（见 ADR-0009）。`WslcApiHost` 作为备通道保留，但当前未被任何业务路径调用（原 `WslcImageService` 的注入已移除），待 API GA 后再评估启用。

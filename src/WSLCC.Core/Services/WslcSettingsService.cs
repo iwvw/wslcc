@@ -4,10 +4,22 @@ namespace WSLCC.Core.Services;
 
 public sealed record SessionConfig(string Name, string StoragePath, string CpuCount, string MemoryMb);
 
+public sealed record WslcSessionOptions(
+    string StoragePath,
+    string CpuCount,
+    string MemoryMb,
+    string MaxStorageSize,
+    string IdleTimeout,
+    string DefaultBindingAddress,
+    string HostLoopback,
+    string CredentialStore);
+
 public interface IWslcSettingsService
 {
     Task<SessionConfig> GetSessionConfigAsync();
     Task SetSessionConfigAsync(SessionConfig config);
+    Task<WslcSessionOptions> GetSessionOptionsAsync();
+    Task SetSessionOptionsAsync(WslcSessionOptions options);
     Task<string> GetRegistryMirrorAsync();
     Task SetRegistryMirrorAsync(string mirror);
     Task<bool> GetMicaEnabledAsync();
@@ -48,8 +60,13 @@ public sealed class WslcSettingsService : IWslcSettingsService
     public const string DefaultRegistryMirror = "docker.1panel.live";
 
     private readonly SettingsRepository _repository;
+    private readonly IWslcSettingsFileService _settingsFile;
 
-    public WslcSettingsService(SettingsRepository repository) => _repository = repository;
+    public WslcSettingsService(SettingsRepository repository, IWslcSettingsFileService settingsFile)
+    {
+        _repository = repository;
+        _settingsFile = settingsFile;
+    }
 
     public async Task<SessionConfig> GetSessionConfigAsync()
     {
@@ -68,6 +85,44 @@ public sealed class WslcSettingsService : IWslcSettingsService
         await _repository.SetAsync(KeyCpu, config.CpuCount);
         await _repository.SetAsync(KeyMem, config.MemoryMb);
     }
+
+    public async Task<WslcSessionOptions> GetSessionOptionsAsync()
+    {
+        var file = _settingsFile.Read();
+        var all = await _repository.GetAllAsync();
+        return new WslcSessionOptions(
+            Normalize(file.StoragePath) ?? (all.TryGetValue(KeyPath, out var p) ? p : WslcHost.DefaultStoragePath),
+            Normalize(file.CpuCount) ?? (all.TryGetValue(KeyCpu, out var c) ? c : string.Empty),
+            Normalize(file.MemorySize) ?? (all.TryGetValue(KeyMem, out var m) ? m : string.Empty),
+            Normalize(file.MaxStorageSize) ?? string.Empty,
+            Normalize(file.IdleTimeout) ?? string.Empty,
+            Normalize(file.DefaultBindingAddress) ?? string.Empty,
+            Normalize(file.HostLoopback) ?? string.Empty,
+            Normalize(file.CredentialStore) ?? "wincred");
+    }
+
+    public async Task SetSessionOptionsAsync(WslcSessionOptions options)
+    {
+        _settingsFile.Write(new WslcSessionFileSettings(
+            ToFileValue(options.CpuCount),
+            ToFileValue(options.MemoryMb),
+            ToFileValue(options.MaxStorageSize),
+            ToFileValue(options.StoragePath),
+            ToFileValue(options.DefaultBindingAddress),
+            ToFileValue(options.HostLoopback),
+            ToFileValue(options.IdleTimeout),
+            ToFileValue(options.CredentialStore)));
+
+        await _repository.SetAsync(KeyPath, options.StoragePath);
+        await _repository.SetAsync(KeyCpu, options.CpuCount);
+        await _repository.SetAsync(KeyMem, options.MemoryMb);
+    }
+
+    private static string? Normalize(string? value)
+        => string.IsNullOrWhiteSpace(value) || value == WslcSettingsFileService.DefaultSentinel ? null : value.Trim();
+
+    private static string? ToFileValue(string? value)
+        => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
     public async Task<string> GetRegistryMirrorAsync()
         => await _repository.GetAsync(KeyMirror) ?? DefaultRegistryMirror;

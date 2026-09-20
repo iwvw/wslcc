@@ -33,4 +33,28 @@ public sealed partial class VolumesPage : Page
         if (await confirm.ShowAsync() == ContentDialogResult.Primary)
             await ViewModel.DeleteAsync(volume);
     }
+
+    private async void Prune_Click(object sender, RoutedEventArgs e)
+    {
+        var confirm = new ContentDialog
+        {
+            Title = L.Get("Prune.ConfirmTitle"),
+            Content = L.Get("Prune.VolumesConfirm"),
+            PrimaryButtonText = L.Get("VolumesPage.DeleteAction"),
+            CloseButtonText = L.Get("VolumesPage.CancelButton"),
+            DefaultButton = ContentDialogButton.Close,
+            XamlRoot = XamlRoot,
+        };
+        if (await confirm.ShowAsync() != ContentDialogResult.Primary) return;
+        var output = await ViewModel.PruneAsync();
+        var dialog = new ContentDialog
+        {
+            Title = L.Get("Prune.ConfirmTitle"),
+            Content = string.IsNullOrWhiteSpace(output) ? L.GetFormat("Prune.ResultFormat", 0) : output,
+            CloseButtonText = L.Get("VolumesPage.CancelButton"),
+            DefaultButton = ContentDialogButton.Close,
+            XamlRoot = XamlRoot,
+        };
+        await dialog.ShowAsync();
+    }
 }

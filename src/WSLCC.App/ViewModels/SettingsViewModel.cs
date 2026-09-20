@@ -31,6 +31,29 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty]
     public partial string ComposeDirectory { get; set; }
 
+    [ObservableProperty]
+    public partial string MaxStorageSize { get; set; }
+
+    [ObservableProperty]
+    public partial string IdleTimeout { get; set; }
+
+    [ObservableProperty]
+    public partial string BindingAddress { get; set; }
+
+    [ObservableProperty]
+    public partial string HostLoopback { get; set; }
+
+    public record CredentialStoreOption(string Value, string Label);
+
+    [ObservableProperty]
+    public partial string CredentialStore { get; set; }
+
+    public ObservableCollection<CredentialStoreOption> CredentialStoreOptions { get; } = new()
+    {
+        new("wincred", L.Get("Settings.CredentialStoreWincred")),
+        new("file", L.Get("Settings.CredentialStoreFile")),
+    };
+
     public bool IsLoaded { get; set; }
 
     [ObservableProperty]
@@ -105,6 +128,11 @@ public partial class SettingsViewModel : ObservableObject
         MemoryMb = string.Empty;
         RegistryMirror = string.Empty;
         ComposeDirectory = string.Empty;
+        MaxStorageSize = string.Empty;
+        IdleTimeout = string.Empty;
+        BindingAddress = string.Empty;
+        HostLoopback = string.Empty;
+        CredentialStore = "wincred";
         DatabasePath = "-";
         AuditCount = "-";
         PullCount = "-";
@@ -162,6 +190,12 @@ public partial class SettingsViewModel : ObservableObject
             StoragePath = config.StoragePath;
             CpuCount = config.CpuCount;
             MemoryMb = config.MemoryMb;
+            var options = await _host.Settings.GetSessionOptionsAsync();
+            MaxStorageSize = options.MaxStorageSize;
+            IdleTimeout = options.IdleTimeout;
+            BindingAddress = options.DefaultBindingAddress;
+            HostLoopback = options.HostLoopback;
+            CredentialStore = string.IsNullOrEmpty(options.CredentialStore) ? "wincred" : options.CredentialStore;
             RegistryMirror = await _host.Settings.GetRegistryMirrorAsync();
             MicaEnabled = await _host.Settings.GetMicaEnabledAsync();
             ComposeDirectory = await _host.Settings.GetComposeDirectoryAsync();
@@ -185,6 +219,21 @@ public partial class SettingsViewModel : ObservableObject
         {
             IsLoaded = true;
         }
+    }
+
+    private static async Task<string?> ResolveSessionNameAsync(string configuredName)
+    {
+        if (string.IsNullOrWhiteSpace(configuredName)) return null;
+        try
+        {
+            var sessions = await WslcHost.Default.System.ListSessionsAsync().ConfigureAwait(false);
+            if (sessions.Any(s => s.Name.Equals(configuredName, StringComparison.OrdinalIgnoreCase)))
+                return configuredName;
+        }
+        catch
+        {
+        }
+        return null;
     }
 
     public async Task ApplyMicaAsync(bool enabled)
@@ -216,6 +265,17 @@ public partial class SettingsViewModel : ObservableObject
                 string.IsNullOrWhiteSpace(StoragePath) ? WslcHost.DefaultStoragePath : StoragePath.Trim(),
                 CpuCount.Trim(),
                 MemoryMb.Trim()));
+            await _host.Settings.SetSessionOptionsAsync(new WslcSessionOptions(
+                string.IsNullOrWhiteSpace(StoragePath) ? WslcHost.DefaultStoragePath : StoragePath.Trim(),
+                CpuCount.Trim(),
+                MemoryMb.Trim(),
+                MaxStorageSize.Trim(),
+                IdleTimeout.Trim(),
+                BindingAddress.Trim(),
+                HostLoopback.Trim(),
+                CredentialStore));
+            _host.Runner.Session = await ResolveSessionNameAsync(
+                string.IsNullOrWhiteSpace(SessionName) ? WslcHost.SessionName : SessionName.Trim());
             await _host.Settings.SetRegistryMirrorAsync(RegistryMirror);
             await _host.Settings.SetComposeDirectoryAsync(ComposeDirectory);
             await _host.Settings.SetCloseBehaviorAsync(CloseBehavior);

@@ -89,7 +89,7 @@ public sealed class WslcComposeService : IWslcComposeService
         var runningProjects = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         try
         {
-            var containers = await _containers.ListAsync(ct).ConfigureAwait(false);
+            var containers = await _containers.ListAsync(ct: ct).ConfigureAwait(false);
             var entries = await _deployments.QueryAsync().ConfigureAwait(false);
             foreach (var group in entries.GroupBy(e => e.ProjectName, StringComparer.OrdinalIgnoreCase))
             {

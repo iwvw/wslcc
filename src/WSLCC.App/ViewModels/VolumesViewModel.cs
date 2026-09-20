@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using WSLCC.Core.Services;
+using WSLCC_App;
 
 namespace WSLCC.App.ViewModels;
 
@@ -66,6 +67,22 @@ public partial class VolumesViewModel : ObservableObject
         {
             ErrorMessage = ex.Message;
             HasError = true;
+        }
+    }
+
+    public async Task<string?> PruneAsync()
+    {
+        try
+        {
+            var output = await WslcHost.Default.Prune.PruneVolumesAsync();
+            await LoadAsync();
+            return output;
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = ex.Message;
+            HasError = true;
+            return null;
         }
     }
 }

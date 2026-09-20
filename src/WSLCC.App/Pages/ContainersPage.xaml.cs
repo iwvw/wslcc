@@ -38,6 +38,60 @@ public sealed partial class ContainersPage : Page
     private async void NewContainer_Click(object sender, RoutedEventArgs e)
         => await ShowCreateDialogAsync();
 
+    private async void CopyFiles_Click(object sender, RoutedEventArgs e)
+    {
+        var sourceBox = new TextBox
+        {
+            Header = L.Get("ContainersPage.CopySourceHeader"),
+            PlaceholderText = L.Get("ContainersPage.CopySourceHeader"),
+        };
+        var targetBox = new TextBox
+        {
+            Header = L.Get("ContainersPage.CopyTargetHeader"),
+            PlaceholderText = L.Get("ContainersPage.CopyTargetHeader"),
+        };
+        var panel = new StackPanel { Spacing = 12 };
+        panel.Children.Add(sourceBox);
+        panel.Children.Add(targetBox);
+        var dialog = new ContentDialog
+        {
+            Title = L.Get("ContainersPage.CopyTitle"),
+            Content = panel,
+            PrimaryButtonText = L.Get("ContainersPage.CopyAction"),
+            CloseButtonText = L.Get("ContainersPage.CancelButton"),
+            DefaultButton = ContentDialogButton.Primary,
+            XamlRoot = XamlRoot,
+        };
+        if (await dialog.ShowAsync() != ContentDialogResult.Primary) return;
+        if (string.IsNullOrWhiteSpace(sourceBox.Text) || string.IsNullOrWhiteSpace(targetBox.Text)) return;
+        try
+        {
+            await ViewModel.CopyFilesAsync(sourceBox.Text.Trim(), targetBox.Text.Trim());
+            await ShowInfoDialogAsync(L.Get("ContainersPage.CopyTitle"), L.Get("ContainersPage.CopyDone"));
+        }
+        catch
+        {
+        }
+    }
+
+    private async void PruneStopped_Click(object sender, RoutedEventArgs e)
+    {
+        var confirm = new ContentDialog
+        {
+            Title = L.Get("Prune.ConfirmTitle"),
+            Content = L.Get("Prune.ContainersConfirm"),
+            PrimaryButtonText = L.Get("ContainersPage.DeleteButton.Content"),
+            CloseButtonText = L.Get("ContainersPage.CancelButton"),
+            DefaultButton = ContentDialogButton.Close,
+            XamlRoot = XamlRoot,
+        };
+        if (await confirm.ShowAsync() != ContentDialogResult.Primary) return;
+        var output = await ViewModel.PruneStoppedAsync();
+        await ShowInfoDialogAsync(
+            L.Get("Prune.ConfirmTitle"),
+            string.IsNullOrWhiteSpace(output) ? L.GetFormat("Prune.ResultFormat", 0) : output);
+    }
+
     private async void ComposeDeploy_Click(object sender, RoutedEventArgs e)
     {
         var path = await PickComposeFileAsync();
@@ -278,6 +332,47 @@ public sealed partial class ContainersPage : Page
         var autoRemove = new CheckBox { Content = L.Get("ContainersPage.CreateAutoRemove") };
         var detached = new CheckBox { Content = L.Get("ContainersPage.CreateDetached"), IsChecked = true };
 
+        var cpusBox = new TextBox { Header = L.Get("ContainersPage.CreateCpusPlaceholder") };
+        var memoryBox = new TextBox { Header = L.Get("ContainersPage.CreateMemoryPlaceholder") };
+        var hostnameBox = new TextBox { Header = L.Get("ContainersPage.CreateHostnamePlaceholder") };
+        var workdirBox = new TextBox { Header = L.Get("ContainersPage.CreateWorkdirPlaceholder") };
+        var userBox = new TextBox { Header = L.Get("ContainersPage.CreateUserPlaceholder") };
+        var entrypointBox = new TextBox { Header = L.Get("ContainersPage.CreateEntrypointPlaceholder") };
+        var networkBox = new TextBox { Header = L.Get("ContainersPage.CreateNetworkPlaceholder") };
+        var stopTimeoutBox = new TextBox { Header = L.Get("ContainersPage.CreateStopTimeoutPlaceholder") };
+        var shmSizeBox = new TextBox { Header = L.Get("ContainersPage.CreateShmSizePlaceholder") };
+        var tmpfsBox = new TextBox { Header = L.Get("ContainersPage.CreateTmpfsPlaceholder") };
+        var gpusBox = new CheckBox { Content = L.Get("ContainersPage.CreateGpus") };
+        var healthCmdBox = new TextBox { Header = L.Get("ContainersPage.CreateHealthCmdPlaceholder") };
+        var healthIntervalBox = new TextBox { Header = L.Get("ContainersPage.CreateHealthIntervalPlaceholder") };
+        var healthTimeoutBox = new TextBox { Header = L.Get("ContainersPage.CreateHealthTimeoutPlaceholder") };
+        var healthRetriesBox = new TextBox { Header = L.Get("ContainersPage.CreateHealthRetriesPlaceholder") };
+        var healthStartPeriodBox = new TextBox { Header = L.Get("ContainersPage.CreateHealthStartPeriodPlaceholder") };
+        var dnsBox = new TextBox { Header = L.Get("ContainersPage.CreateDnsPlaceholder") };
+        var ulimitsBox = new TextBox { Header = L.Get("ContainersPage.CreateUlimitsPlaceholder") };
+        var pullBox = new TextBox { Header = L.Get("ContainersPage.CreatePullPlaceholder") };
+
+        var advancedPanel = new StackPanel { Spacing = 12 };
+        advancedPanel.Children.Add(new TextBlock
+        {
+            Text = L.Get("ContainersPage.CreateAdvancedHeader"),
+            Style = (Style)Application.Current.Resources["BodyStrongTextBlockStyle"],
+        });
+        foreach (var element in new FrameworkElement[]
+        {
+            cpusBox, memoryBox, hostnameBox, workdirBox, userBox, entrypointBox, networkBox,
+            stopTimeoutBox, shmSizeBox, tmpfsBox, gpusBox,
+            healthCmdBox, healthIntervalBox, healthTimeoutBox, healthRetriesBox, healthStartPeriodBox,
+            dnsBox, ulimitsBox, pullBox,
+        })
+            advancedPanel.Children.Add(element);
+
+        var advancedExpander = new Expander
+        {
+            Header = L.Get("ContainersPage.CreateAdvancedHeader"),
+            Content = new ScrollViewer { MaxHeight = 360, Content = advancedPanel },
+        };
+
         var panel = new StackPanel { Spacing = 12 };
         panel.Children.Add(nameBox);
         panel.Children.Add(imageBox);
@@ -287,11 +382,12 @@ public sealed partial class ContainersPage : Page
         panel.Children.Add(volumeBox);
         panel.Children.Add(autoRemove);
         panel.Children.Add(detached);
+        panel.Children.Add(advancedExpander);
 
         var dialog = new ContentDialog
         {
             Title = L.Get("ContainersPage.CreateContainerTitle"),
-            Content = panel,
+            Content = new ScrollViewer { MaxHeight = 560, Content = panel },
             PrimaryButtonText = L.Get("ContainersPage.CreateButton"),
             CloseButtonText = L.Get("ContainersPage.CancelButton"),
             DefaultButton = ContentDialogButton.Primary,
@@ -318,8 +414,30 @@ public sealed partial class ContainersPage : Page
             volumes,
             autoRemove.IsChecked == true,
             detached.IsChecked == true,
-            Command: command);
+            Command: command,
+            Cpus: Trim(cpusBox.Text),
+            Memory: Trim(memoryBox.Text),
+            Hostname: Trim(hostnameBox.Text),
+            Workdir: Trim(workdirBox.Text),
+            User: Trim(userBox.Text),
+            Entrypoint: Trim(entrypointBox.Text),
+            Network: Trim(networkBox.Text),
+            StopTimeout: Trim(stopTimeoutBox.Text),
+            ShmSize: Trim(shmSizeBox.Text),
+            Gpus: gpusBox.IsChecked == true,
+            Tmpfs: Trim(tmpfsBox.Text),
+            PullPolicy: Trim(pullBox.Text),
+            HealthCommand: Trim(healthCmdBox.Text),
+            HealthInterval: Trim(healthIntervalBox.Text),
+            HealthTimeout: Trim(healthTimeoutBox.Text),
+            HealthRetries: Trim(healthRetriesBox.Text),
+            HealthStartPeriod: Trim(healthStartPeriodBox.Text),
+            Dns: SplitList(dnsBox.Text),
+            Ulimits: SplitList(ulimitsBox.Text));
     }
+
+    private static string? Trim(string? text)
+        => string.IsNullOrWhiteSpace(text) ? null : text.Trim();
 
     private static string[] SplitList(string text)
         => text.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);

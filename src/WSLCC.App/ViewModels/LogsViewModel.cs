@@ -27,6 +27,21 @@ public partial class LogsViewModel : ObservableObject
     [ObservableProperty]
     public partial bool HasError { get; set; }
 
+    [ObservableProperty]
+    public partial string TailText { get; set; }
+
+    [ObservableProperty]
+    public partial bool ShowTimestamps { get; set; }
+
+    [ObservableProperty]
+    public partial bool ShowDetails { get; set; }
+
+    [ObservableProperty]
+    public partial string SinceText { get; set; }
+
+    [ObservableProperty]
+    public partial string UntilText { get; set; }
+
     public LogsViewModel(IWslcLogService logs, IWslcContainerService containers)
     {
         _logs = logs;
@@ -34,6 +49,9 @@ public partial class LogsViewModel : ObservableObject
         SelectedContainerName = string.Empty;
         LogText = string.Empty;
         ErrorMessage = string.Empty;
+        TailText = string.Empty;
+        SinceText = string.Empty;
+        UntilText = string.Empty;
     }
 
     public AsyncRelayCommand RefreshCommand => new(LoadAsync);
@@ -48,7 +66,7 @@ public partial class LogsViewModel : ObservableObject
         HasError = false;
         try
         {
-            var list = await _containers.ListAsync();
+            var list = await _containers.ListAsync(ct: CancellationToken.None);
             ContainerNames.Clear();
             foreach (var c in list)
                 ContainerNames.Add(c.Name);
@@ -74,7 +92,13 @@ public partial class LogsViewModel : ObservableObject
         HasError = false;
         try
         {
-            var text = await _logs.GetLogsAsync(SelectedContainerName);
+            var options = new WslcLogOptions(
+                int.TryParse(TailText?.Trim(), out var tail) ? tail : null,
+                ShowTimestamps,
+                ShowDetails,
+                string.IsNullOrWhiteSpace(SinceText) ? null : SinceText.Trim(),
+                string.IsNullOrWhiteSpace(UntilText) ? null : UntilText.Trim());
+            var text = await _logs.GetLogsAsync(SelectedContainerName, options);
             if (version != _requestVersion) return;
             LogText = text;
         }

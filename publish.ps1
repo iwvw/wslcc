@@ -13,6 +13,9 @@ $project = Join-Path $PSScriptRoot "src\WSLCC.App\WSLCC.App.csproj"
 $publishDir = Join-Path $PSScriptRoot "dist\publish"
 $exe = Join-Path $publishDir "WSLCC.exe"
 
+# Microsoft.WSL.Containers 只随 microsoft/WSL 的 GitHub Release 发布，需先取到本地源
+& (Join-Path $PSScriptRoot "scripts\fetch-wslc-sdk.ps1")
+
 if (Test-Path $publishDir) { Remove-Item $publishDir -Recurse -Force }
 New-Item -ItemType Directory -Path $publishDir -Force | Out-Null
 

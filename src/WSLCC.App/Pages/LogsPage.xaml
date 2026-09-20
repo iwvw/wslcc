@@ -14,6 +14,7 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
@@ -53,8 +54,36 @@
                 Content="加载日志" />
         </StackPanel>
 
-        <InfoBar
+        <StackPanel
             Grid.Row="2"
+            Orientation="Horizontal"
+            Spacing="12">
+            <TextBox
+                Width="120"
+                Header="显示末尾行数"
+                Text="{x:Bind ViewModel.TailText, Mode=TwoWay}" />
+            <TextBox
+                Width="220"
+                Header="起始时间"
+                PlaceholderText="Unix 秒或 RFC3339"
+                Text="{x:Bind ViewModel.SinceText, Mode=TwoWay}" />
+            <TextBox
+                Width="220"
+                Header="截止时间"
+                PlaceholderText="Unix 秒或 RFC3339"
+                Text="{x:Bind ViewModel.UntilText, Mode=TwoWay}" />
+            <CheckBox
+                VerticalAlignment="Bottom"
+                Content="显示时间戳"
+                IsChecked="{x:Bind ViewModel.ShowTimestamps, Mode=TwoWay}" />
+            <CheckBox
+                VerticalAlignment="Bottom"
+                Content="显示额外详情"
+                IsChecked="{x:Bind ViewModel.ShowDetails, Mode=TwoWay}" />
+        </StackPanel>
+
+        <InfoBar
+            Grid.Row="3"
             IsClosable="True"
             IsOpen="{x:Bind ViewModel.HasError, Mode=OneWay}"
             Message="{x:Bind ViewModel.ErrorMessage, Mode=OneWay}"
@@ -62,7 +91,7 @@
             Title="日志不可用" />
 
         <TextBox
-            Grid.Row="3"
+            Grid.Row="4"
             AcceptsReturn="True"
             FontFamily="Consolas"
             IsReadOnly="True"

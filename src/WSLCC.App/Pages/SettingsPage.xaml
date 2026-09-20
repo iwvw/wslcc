@@ -67,6 +67,11 @@
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
                             </Grid.RowDefinitions>
 
                             <TextBlock VerticalAlignment="Center" Text="会话名称" />
@@ -138,7 +143,66 @@
                                 ItemsSource="{x:Bind ViewModel.CloseBehaviorOptions, Mode=OneWay}"
                                 SelectedValue="{x:Bind ViewModel.CloseBehavior, Mode=TwoWay}"
                                 SelectedValuePath="Value" />
+
+                            <TextBlock
+                                Grid.Row="7"
+                                VerticalAlignment="Center"
+                                Text="最大磁盘配额" />
+                            <TextBox
+                                Grid.Row="7"
+                                Grid.Column="1"
+                                PlaceholderText="如 500GB，留空使用默认 1TB"
+                                Text="{x:Bind ViewModel.MaxStorageSize, Mode=TwoWay}" />
+
+                            <TextBlock
+                                Grid.Row="8"
+                                VerticalAlignment="Center"
+                                Text="空闲回收秒数" />
+                            <TextBox
+                                Grid.Row="8"
+                                Grid.Column="1"
+                                PlaceholderText="如 30，留空使用默认"
+                                Text="{x:Bind ViewModel.IdleTimeout, Mode=TwoWay}" />
+
+                            <TextBlock
+                                Grid.Row="9"
+                                VerticalAlignment="Center"
+                                Text="端口默认绑定地址" />
+                            <TextBox
+                                Grid.Row="9"
+                                Grid.Column="1"
+                                PlaceholderText="如 127.0.0.1"
+                                Text="{x:Bind ViewModel.BindingAddress, Mode=TwoWay}" />
+
+                            <TextBlock
+                                Grid.Row="10"
+                                VerticalAlignment="Center"
+                                Text="宿主回环域名" />
+                            <TextBox
+                                Grid.Row="10"
+                                Grid.Column="1"
+                                PlaceholderText="如 host.wslc.internal，none 表示禁用"
+                                Text="{x:Bind ViewModel.HostLoopback, Mode=TwoWay}" />
+
+                            <TextBlock
+                                Grid.Row="11"
+                                VerticalAlignment="Center"
+                                Text="凭据存储方式" />
+                            <ComboBox
+                                Grid.Row="11"
+                                Grid.Column="1"
+                                MinWidth="240"
+                                HorizontalAlignment="Left"
+                                DisplayMemberPath="Label"
+                                ItemsSource="{x:Bind ViewModel.CredentialStoreOptions, Mode=OneWay}"
+                                SelectedValue="{x:Bind ViewModel.CredentialStore, Mode=TwoWay}"
+                                SelectedValuePath="Value" />
                         </Grid>
+                        <TextBlock
+                            Style="{StaticResource CaptionTextBlockStyle}"
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                            TextWrapping="Wrap"
+                            Text="以上会话选项写入 wslc 官方 settings.yaml，重启 wslc 会话后生效。" />
                         <Button
                             HorizontalAlignment="Right"
                             Command="{x:Bind ViewModel.SaveCommand}"

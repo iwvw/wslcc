@@ -36,6 +36,9 @@ public partial class ImagesViewModel : ObservableObject
     [ObservableProperty]
     public partial bool HasImages { get; set; }
 
+    [ObservableProperty]
+    public partial bool ShowIntermediate { get; set; }
+
     public ImagesViewModel(IWslcImageService images)
     {
         _images = images;
@@ -48,13 +51,15 @@ public partial class ImagesViewModel : ObservableObject
 
     public AsyncRelayCommand PullCommand => new(PullAsync);
 
+    partial void OnShowIntermediateChanged(bool value) => _ = LoadAsync();
+
     public async Task LoadAsync()
     {
         IsLoading = true;
         HasError = false;
         try
         {
-            var list = await _images.ListAsync();
+            var list = await _images.ListAsync(ShowIntermediate);
             Images.Clear();
             foreach (var item in list)
                 Images.Add(new ImageItemViewModel(item));
@@ -67,6 +72,34 @@ public partial class ImagesViewModel : ObservableObject
         finally
         {
             IsLoading = false;
+        }
+    }
+
+    public async Task<string?> InspectAsync(ImageItemViewModel image)
+    {
+        try
+        {
+            return await _images.InspectAsync(image.Source.FullName);
+        }
+        catch (Exception ex)
+        {
+            ShowError(ex);
+            return null;
+        }
+    }
+
+    public async Task<string?> PruneAsync()
+    {
+        try
+        {
+            var output = await WslcHost.Default.Prune.PruneImagesAsync();
+            await LoadAsync();
+            return output;
+        }
+        catch (Exception ex)
+        {
+            ShowError(ex);
+            return null;
         }
     }
 

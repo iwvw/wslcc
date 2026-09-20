@@ -6,7 +6,7 @@ namespace WSLCC.Core.Services;
 
 public interface IWslcContainerService
 {
-    Task<IReadOnlyList<ContainerItem>> ListAsync(CancellationToken ct = default);
+    Task<IReadOnlyList<ContainerItem>> ListAsync(bool includeSize = false, CancellationToken ct = default);
     Task StartAsync(string nameOrId, CancellationToken ct = default);
     Task StopAsync(string nameOrId, CancellationToken ct = default);
     Task KillAsync(string nameOrId, CancellationToken ct = default);
@@ -14,7 +14,8 @@ public interface IWslcContainerService
     Task RemoveAsync(string nameOrId, bool force = false, CancellationToken ct = default);
     Task RunAsync(ContainerCreateOptions options, IProgress<string>? progress = null, CancellationToken ct = default);
     Task<IReadOnlyDictionary<string, ContainerStats>> GetStatsAsync(CancellationToken ct = default);
-    Task<ContainerItem?> InspectAsync(string nameOrId, CancellationToken ct = default);
+    Task<ContainerItem?> InspectAsync(string nameOrId, bool includeSize = false, CancellationToken ct = default);
+    Task CopyAsync(string source, string target, CancellationToken ct = default);
 }
 
 public sealed class WslcContainerService : IWslcContainerService
@@ -30,9 +31,13 @@ public sealed class WslcContainerService : IWslcContainerService
         _history = history;
     }
 
-    public async Task<IReadOnlyList<ContainerItem>> ListAsync(CancellationToken ct = default)
+    public async Task<IReadOnlyList<ContainerItem>> ListAsync(bool includeSize = false, CancellationToken ct = default)
     {
-        var lines = await _runner.RunJsonLinesAsync(["container", "list", "-a", "--format", "json"], ct).ConfigureAwait(false);
+        var args = new List<string> { "container", "list", "-a" };
+        if (includeSize) args.Add("--size");
+        args.Add("--format");
+        args.Add("json");
+        var lines = await _runner.RunJsonLinesAsync(args, ct).ConfigureAwait(false);
         var items = lines.Select(Parse).ToList();
         await SafeRecordAsync(() => _history.RecordContainerSnapshotAsync(items)).ConfigureAwait(false);
         return items;
@@ -56,6 +61,9 @@ public sealed class WslcContainerService : IWslcContainerService
             nameOrId, ct, "remove");
 
     public Task RunAsync(ContainerCreateOptions options, IProgress<string>? progress = null, CancellationToken ct = default)
+        => ExecuteAsync(BuildRunArgs(options), options.Name, ct, "run", progress);
+
+    private static List<string> BuildRunArgs(ContainerCreateOptions options)
     {
         var args = new List<string> { "run" };
         if (options.Detached) args.Add("-d");
@@ -85,10 +93,55 @@ public sealed class WslcContainerService : IWslcContainerService
                 args.Add($"{label.Key}={label.Value}");
             }
         }
+        AddValue(args, "--cpus", options.Cpus);
+        AddValue(args, "-m", options.Memory);
+        AddValue(args, "-h", options.Hostname);
+        AddValue(args, "-w", options.Workdir);
+        AddValue(args, "-u", options.User);
+        AddValue(args, "--entrypoint", options.Entrypoint);
+        AddValue(args, "--network", options.Network);
+        AddValue(args, "--stop-signal", options.StopSignal);
+        AddValue(args, "--stop-timeout", options.StopTimeout);
+        AddValue(args, "--shm-size", options.ShmSize);
+        AddValue(args, "--tmpfs", options.Tmpfs);
+        AddValue(args, "--pull", options.PullPolicy);
+        AddValue(args, "--health-cmd", options.HealthCommand);
+        AddValue(args, "--health-interval", options.HealthInterval);
+        AddValue(args, "--health-timeout", options.HealthTimeout);
+        AddValue(args, "--health-retries", options.HealthRetries);
+        AddValue(args, "--health-start-period", options.HealthStartPeriod);
+        if (options.Gpus)
+        {
+            args.Add("--gpus");
+            args.Add("all");
+        }
+        if (options.Dns is { Count: > 0 })
+        {
+            foreach (var dns in options.Dns)
+            {
+                args.Add("--dns");
+                args.Add(dns);
+            }
+        }
+        if (options.Ulimits is { Count: > 0 })
+        {
+            foreach (var ulimit in options.Ulimits)
+            {
+                args.Add("--ulimit");
+                args.Add(ulimit);
+            }
+        }
         args.Add(options.Image);
         if (options.Command is { Count: > 0 })
             args.AddRange(options.Command);
-        return ExecuteAsync(args, options.Name, ct, "run", progress);
+        return args;
+    }
+
+    private static void AddValue(List<string> args, string flag, string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return;
+        args.Add(flag);
+        args.Add(value.Trim());
     }
 
     public async Task<IReadOnlyDictionary<string, ContainerStats>> GetStatsAsync(CancellationToken ct = default)
@@ -115,16 +168,35 @@ public sealed class WslcContainerService : IWslcContainerService
         return result;
     }
 
-    public async Task<ContainerItem?> InspectAsync(string nameOrId, CancellationToken ct = default)
+    public async Task<ContainerItem?> InspectAsync(string nameOrId, bool includeSize = false, CancellationToken ct = default)
     {
         try
         {
-            var json = await _runner.RunAsync(["inspect", nameOrId], ct: ct).ConfigureAwait(false);
+            var args = includeSize
+                ? new List<string> { "inspect", "-s", nameOrId }
+                : ["inspect", nameOrId];
+            var json = await _runner.RunAsync(args, ct: ct).ConfigureAwait(false);
             return ParseInspect(nameOrId, json);
         }
         catch (WslcCliException)
         {
             return null;
+        }
+    }
+
+    public async Task CopyAsync(string source, string target, CancellationToken ct = default)
+    {
+        var started = DateTimeOffset.Now;
+        try
+        {
+            await _runner.RunAsync(["container", "cp", source, target], ct: ct).ConfigureAwait(false);
+            await SafeRecordAsync(() => _audit.RecordAsync("container", "cp", $"{source} -> {target}", true, durationMs: ElapsedMs(started))).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            if (ex is not OperationCanceledException)
+                await SafeRecordAsync(() => _audit.RecordAsync("container", "cp", $"{source} -> {target}", false, ex.Message, ElapsedMs(started))).ConfigureAwait(false);
+            throw;
         }
     }
 

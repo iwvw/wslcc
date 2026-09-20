@@ -294,6 +294,9 @@ public sealed partial class MainWindow : Window
             case "volumes":
                 NavFrame.Navigate(typeof(VolumesPage));
                 break;
+            case "networks":
+                NavFrame.Navigate(typeof(NetworksPage));
+                break;
             case "logs":
                 NavFrame.Navigate(typeof(LogsPage));
                 break;

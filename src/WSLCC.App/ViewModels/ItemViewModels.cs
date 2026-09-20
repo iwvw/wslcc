@@ -19,6 +19,29 @@ public sealed partial class VolumeItemViewModel : ObservableObject
     public VolumeItemViewModel(VolumeItem source) => Source = source;
 }
 
+public sealed partial class NetworkItemViewModel : ObservableObject
+{
+    public NetworkItem Source { get; }
+
+    public string Name => Source.Name;
+
+    public string Driver => string.IsNullOrEmpty(Source.Driver) ? "-" : Source.Driver;
+
+    public string Scope => string.IsNullOrEmpty(Source.Scope) ? "-" : Source.Scope;
+
+    public string Id => Source.Id;
+
+    public string Ipv4 => string.IsNullOrEmpty(Source.IPv4) ? "-" : Source.IPv4;
+
+    public string Ipv6 => string.IsNullOrEmpty(Source.IPv6) ? "-" : Source.IPv6;
+
+    public bool IsInternal => Source.Internal.Equals("true", StringComparison.OrdinalIgnoreCase);
+
+    public string InternalText => IsInternal ? L.Get("NetworksPage.InternalLabel") : "-";
+
+    public NetworkItemViewModel(NetworkItem source) => Source = source;
+}
+
 public sealed partial class ImageItemViewModel : ObservableObject
 {
     public ImageItem Source { get; }

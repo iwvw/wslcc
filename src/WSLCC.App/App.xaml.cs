@@ -71,9 +71,40 @@ public partial class App : Application
         _window = new MainWindow();
         Main = (MainWindow)_window;
         _window.Activate();
+        _ = ApplySessionFromSettingsAsync();
         _ = RestoreContainersIfEnabledAsync();
         _ = AutoCheckUpdateAsync();
         _ = MigrateLegacyComposeAsync();
+    }
+
+    private static async Task ApplySessionFromSettingsAsync()
+    {
+        try
+        {
+            var session = await WslcHost.Default.Settings.GetSessionConfigAsync().ConfigureAwait(false);
+            WslcHost.Default.Runner.Session = await ResolveSessionNameAsync(session.Name).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            WriteLog($"应用会话配置失败：{ex}");
+        }
+    }
+
+    private static async Task<string?> ResolveSessionNameAsync(string configuredName)
+    {
+        if (string.IsNullOrWhiteSpace(configuredName)) return null;
+        try
+        {
+            var sessions = await WslcHost.Default.System.ListSessionsAsync().ConfigureAwait(false);
+            if (sessions.Any(s => s.Name.Equals(configuredName, StringComparison.OrdinalIgnoreCase)))
+                return configuredName;
+            WriteLog($"会话 '{configuredName}' 不存在，回退到 wslc 默认会话。");
+        }
+        catch (Exception ex)
+        {
+            WriteLog($"校验会话 '{configuredName}' 失败，回退到默认会话：{ex}");
+        }
+        return null;
     }
 
     private static async Task MigrateLegacyComposeAsync()

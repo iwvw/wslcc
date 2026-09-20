@@ -7,31 +7,37 @@ namespace WSLCC.Core.Services;
 
 public interface IWslcImageService
 {
-    Task<IReadOnlyList<ImageItem>> ListAsync(CancellationToken ct = default);
+    Task<IReadOnlyList<ImageItem>> ListAsync(bool includeIntermediate = false, CancellationToken ct = default);
     Task PullAsync(string imageRef, IProgress<string>? progress = null, CancellationToken ct = default);
     Task DeleteAsync(string imageRef, CancellationToken ct = default);
+    Task<string> InspectAsync(string imageRef, CancellationToken ct = default);
 }
 
 public sealed class WslcImageService : IWslcImageService
 {
     private readonly WslcRunner _runner;
-    private readonly IWslcApiHost _api;
     private readonly IWslcAuditService _audit;
     private readonly IWslcHistoryService _history;
 
-    public WslcImageService(WslcRunner runner, IWslcApiHost api, IWslcAuditService audit, IWslcHistoryService history)
+    public WslcImageService(WslcRunner runner, IWslcAuditService audit, IWslcHistoryService history)
     {
         _runner = runner;
-        _api = api;
         _audit = audit;
         _history = history;
     }
 
-    public async Task<IReadOnlyList<ImageItem>> ListAsync(CancellationToken ct = default)
+    public async Task<IReadOnlyList<ImageItem>> ListAsync(bool includeIntermediate = false, CancellationToken ct = default)
     {
-        var lines = await _runner.RunJsonLinesAsync(["image", "ls", "--format", "json"], ct).ConfigureAwait(false);
+        var args = new List<string> { "image", "ls" };
+        if (includeIntermediate) args.Add("--all");
+        args.Add("--format");
+        args.Add("json");
+        var lines = await _runner.RunJsonLinesAsync(args, ct).ConfigureAwait(false);
         return lines.Select(Parse).ToList();
     }
+
+    public Task<string> InspectAsync(string imageRef, CancellationToken ct = default)
+        => _runner.RunAsync(["image", "inspect", imageRef], ct: ct);
 
     public async Task PullAsync(string imageRef, IProgress<string>? progress = null, CancellationToken ct = default)
     {

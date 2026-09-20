@@ -9,6 +9,14 @@ public sealed partial class WslcRunner
 {
     public sealed record RunOptions(bool ThrowOnWslcError = true, bool CheckOutputForErrors = true);
 
+    private string? _session;
+
+    public string? Session
+    {
+        get => Volatile.Read(ref _session);
+        set => Volatile.Write(ref _session, string.IsNullOrWhiteSpace(value) ? null : value.Trim());
+    }
+
     public async Task<string> RunAsync(IReadOnlyList<string> args, RunOptions? options = null, CancellationToken ct = default)
     {
         using var process = StartProcess(args);
@@ -83,7 +91,7 @@ public sealed partial class WslcRunner
         return ParseJsonLines(output);
     }
 
-    private static Process StartProcess(IReadOnlyList<string> args)
+    private Process StartProcess(IReadOnlyList<string> args)
     {
         var psi = new ProcessStartInfo("wslc.exe")
         {
@@ -95,6 +103,14 @@ public sealed partial class WslcRunner
             StandardOutputEncoding = Encoding.UTF8,
             StandardErrorEncoding = Encoding.UTF8,
         };
+
+        var session = Session;
+        if (session is not null)
+        {
+            psi.ArgumentList.Add("--session");
+            psi.ArgumentList.Add(session);
+        }
+
         foreach (var arg in args)
             psi.ArgumentList.Add(arg);
 
