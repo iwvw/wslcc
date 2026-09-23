@@ -224,7 +224,7 @@ public sealed partial class ContainersPage : Page
                 {
                     Title = L.Get("ContainersPage.DeleteContainerTitle"),
                     Content = L.GetFormat("ContainersPage.DeleteContainerConfirm", item.Source.Name),
-                    PrimaryButtonText = L.Get("ContainersPage.DeleteButton"),
+                    PrimaryButtonText = L.Get("ContainersPage.DeleteButton.Content"),
                     CloseButtonText = L.Get("ContainersPage.CancelButton"),
                     DefaultButton = ContentDialogButton.Close,
                     XamlRoot = XamlRoot,
