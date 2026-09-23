@@ -46,6 +46,8 @@ public partial class App : Application
         else if (theme == "light")
             Application.Current.RequestedTheme = ApplicationTheme.Light;
 
+        CurrentTheme = theme;
+
         var window = Main;
         if (window?.Content is FrameworkElement root)
         {
@@ -56,7 +58,10 @@ public partial class App : Application
                 _ => ElementTheme.Default,
             };
         }
+        window?.ApplyMiniPanelTheme(theme);
     }
+
+    public static string CurrentTheme { get; private set; } = "default";
 
     protected override async void OnLaunched(Microsoft.UI.Xaml.LaunchActivatedEventArgs args)
     {

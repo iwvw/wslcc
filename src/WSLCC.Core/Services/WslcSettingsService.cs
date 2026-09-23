@@ -36,6 +36,8 @@ public interface IWslcSettingsService
     Task SetAutoCheckUpdateEnabledAsync(bool enabled);
     Task<bool> GetMinimizeNotifyEnabledAsync();
     Task SetMinimizeNotifyEnabledAsync(bool enabled);
+    Task<bool> GetTrayMiniPanelEnabledAsync();
+    Task SetTrayMiniPanelEnabledAsync(bool enabled);
     Task<string> GetLanguageAsync();
     Task SetLanguageAsync(string language);
     Task<Dictionary<string, string>> GetAllAsync();
@@ -55,6 +57,7 @@ public sealed class WslcSettingsService : IWslcSettingsService
     private const string KeyStartupContainers = "app.startupContainers";
     private const string KeyAutoCheckUpdate = "app.autoCheckUpdate";
     private const string KeyMinimizeNotify = "app.minimizeTrayNotify";
+    private const string KeyTrayMiniPanel = "app.trayMiniPanel";
     private const string KeyLanguage = "app.language";
 
     public const string DefaultRegistryMirror = "docker.1panel.live";
@@ -171,6 +174,12 @@ public sealed class WslcSettingsService : IWslcSettingsService
 
     public Task SetMinimizeNotifyEnabledAsync(bool enabled)
         => _repository.SetAsync(KeyMinimizeNotify, enabled ? "1" : "0");
+
+    public async Task<bool> GetTrayMiniPanelEnabledAsync()
+        => (await _repository.GetAsync(KeyTrayMiniPanel)) != "0";
+
+    public Task SetTrayMiniPanelEnabledAsync(bool enabled)
+        => _repository.SetAsync(KeyTrayMiniPanel, enabled ? "1" : "0");
 
     public async Task<string> GetLanguageAsync()
         => await _repository.GetAsync(KeyLanguage) ?? "system";

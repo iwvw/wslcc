@@ -94,10 +94,24 @@ public sealed partial class ContainerItemViewModel : ObservableObject
             {
                 var binding = part.Split("->", 2)[0].Trim();
                 var hostPort = binding.Contains('/') ? binding.Split('/')[0] : binding;
-                if (!hostPort.Contains(':')) continue;
-                var segments = hostPort.Split(':');
-                var port = segments[^1];
-                var host = segments.Length >= 2 && segments[0].Length > 0 ? segments[0] : "localhost";
+                var host = "localhost";
+                string port;
+                if (hostPort.StartsWith('['))
+                {
+                    var close = hostPort.IndexOf(']');
+                    if (close < 0) continue;
+                    host = hostPort[1..close];
+                    port = hostPort[(close + 1)..].TrimStart(':');
+                }
+                else
+                {
+                    var colon = hostPort.LastIndexOf(':');
+                    if (colon < 0) continue;
+                    var rawHost = hostPort[..colon];
+                    host = rawHost.Length > 0 ? rawHost : "localhost";
+                    port = hostPort[(colon + 1)..];
+                }
+                if (host is "0.0.0.0" or "::" or "[::]") host = "localhost";
                 if (int.TryParse(port, out _)) return $"http://{host}:{port}";
             }
             return null;

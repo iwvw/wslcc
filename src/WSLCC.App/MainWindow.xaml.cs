@@ -4,6 +4,7 @@ using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
+using WSLCC.App.Mini;
 using WSLCC.App.Pages;
 using WSLCC.Core.Services;
 using Forms = System.Windows.Forms;
@@ -13,6 +14,8 @@ namespace WSLCC_App;
 public sealed partial class MainWindow : Window
 {
     private Forms.NotifyIcon? _notifyIcon;
+    private MiniWindow? _miniWindow;
+    private bool _trayMiniPanelEnabled = true;
     private bool _forceExit;
 
     public MainWindow()
@@ -33,6 +36,7 @@ public sealed partial class MainWindow : Window
         NavFrame.Navigate(typeof(HomePage));
 
         CreateTrayIcon();
+        _ = RefreshTrayPreferencesAsync();
 
         AppWindow.Closing += OnAppWindowClosing;
     }
@@ -50,12 +54,13 @@ public sealed partial class MainWindow : Window
             _notifyIcon.MouseDown += (_, e) =>
             {
                 if (e.Button == Forms.MouseButtons.Left)
-                    ShowMainWindow();
+                    OnTrayLeftClick();
             };
 
             var menu = new Forms.ContextMenuStrip();
             menu.Opening += (_, _) => ApplyMenuTheme(menu);
             menu.Items.Add(L.Get("MainWindow.TrayOpen"), null, (_, _) => ShowMainWindow());
+            menu.Items.Add(L.Get("MainWindow.TrayMiniPanel"), null, (_, _) => ToggleMiniWindow());
             menu.Items.Add(new Forms.ToolStripSeparator());
             menu.Items.Add(L.Get("MainWindow.TrayExit"), null, (_, _) => ExitFromTray());
             _notifyIcon.ContextMenuStrip = menu;
@@ -156,6 +161,7 @@ public sealed partial class MainWindow : Window
         if (behavior == "exit")
         {
             _forceExit = true;
+            CloseMiniWindow();
             return;
         }
 
@@ -214,11 +220,60 @@ public sealed partial class MainWindow : Window
         }
     }
 
-    private void ShowMainWindow()
+    private void OnTrayLeftClick()
+    {
+        if (_trayMiniPanelEnabled) ToggleMiniWindow();
+        else ShowMainWindow();
+    }
+
+    public async Task RefreshTrayPreferencesAsync()
+    {
+        try
+        {
+            _trayMiniPanelEnabled = await WslcHost.Default.Settings.GetTrayMiniPanelEnabledAsync();
+        }
+        catch (Exception ex)
+        {
+            App.WriteLog($"读取托盘偏好失败：{ex}");
+        }
+    }
+
+    public void SetTrayMiniPanelEnabled(bool enabled) => _trayMiniPanelEnabled = enabled;
+
+    private void ToggleMiniWindow()
+    {
+        _miniWindow ??= new MiniWindow();
+        _miniWindow.ToggleVisible();
+    }
+
+    public void ApplyMiniPanelTheme(string theme)
+        => _miniWindow?.ApplyTheme(theme);
+
+    public void ShowAndActivate()
     {
         AppWindow.Show();
         SetForegroundWindow(WinRT.Interop.WindowNative.GetWindowHandle(this));
     }
+
+    public void ShowContainers()
+    {
+        SelectNavItem("containers");
+        ShowAndActivate();
+    }
+
+    private void SelectNavItem(string tag)
+    {
+        foreach (var item in NavView.MenuItems.OfType<NavigationViewItem>())
+        {
+            if (item.Tag is string value && value == tag)
+            {
+                NavView.SelectedItem = item;
+                return;
+            }
+        }
+    }
+
+    private void ShowMainWindow() => ShowAndActivate();
 
     [DllImport("user32.dll")]
     private static extern bool SetForegroundWindow(IntPtr hWnd);
@@ -226,6 +281,7 @@ public sealed partial class MainWindow : Window
     private void ExitFromTray()
     {
         _forceExit = true;
+        CloseMiniWindow();
         _notifyIcon?.Dispose();
         _notifyIcon = null;
         Close();
@@ -234,13 +290,24 @@ public sealed partial class MainWindow : Window
     public void ExitForUpdate()
     {
         _forceExit = true;
+        CloseMiniWindow();
         _notifyIcon?.Dispose();
         _notifyIcon = null;
         Close();
     }
 
+    private void CloseMiniWindow()
+    {
+        if (_miniWindow is null) return;
+        _miniWindow.ForceClose();
+        _miniWindow = null;
+    }
+
     public void ApplyBackdrop(bool enableMica)
-        => SystemBackdrop = enableMica ? new MicaBackdrop() : null;
+    {
+        SystemBackdrop = enableMica ? new MicaBackdrop() : null;
+        _miniWindow?.ApplyBackdrop(enableMica);
+    }
 
     private async Task InitializeAppearanceAsync()
     {

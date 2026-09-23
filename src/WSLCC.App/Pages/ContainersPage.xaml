@@ -117,18 +117,21 @@
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
-                                    <InfoBadge
+                                    <Ellipse
+                                        Width="10" Height="10"
+                                        HorizontalAlignment="Center"
                                         VerticalAlignment="Center"
-                                        Width="10" Height="10" CornerRadius="5"
-Background="{ThemeResource SystemFillColorSuccessBrush}"
+                                        Fill="{ThemeResource SystemFillColorSuccessBrush}"
                                         Visibility="{x:Bind IsRunning, Converter={StaticResource BoolToVis}, Mode=OneWay}" />
-                                    <InfoBadge
+                                    <Ellipse
+                                        Width="10" Height="10"
+                                        HorizontalAlignment="Center"
                                         VerticalAlignment="Center"
-                                        Width="10" Height="10" CornerRadius="5"
-Background="{ThemeResource TextFillColorSecondaryBrush}"
+                                        Fill="{ThemeResource TextFillColorSecondaryBrush}"
                                         Visibility="{x:Bind IsRunning, Converter={StaticResource InverseBoolToVis}, Mode=OneWay}" />
                                     <TextBlock
                                         Grid.Column="1"
+                                        VerticalAlignment="Center"
                                         Style="{StaticResource BodyStrongTextBlockStyle}"
                                         TextTrimming="CharacterEllipsis"
                                         Text="{x:Bind Name}" />

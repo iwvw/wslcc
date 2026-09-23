@@ -71,7 +71,6 @@
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="Auto" />
-                                <RowDefinition Height="Auto" />
                             </Grid.RowDefinitions>
 
                             <TextBlock VerticalAlignment="Center" Text="会话名称" />
@@ -133,63 +132,49 @@
                             <TextBlock
                                 Grid.Row="6"
                                 VerticalAlignment="Center"
-                                Text="关闭行为" />
-                            <ComboBox
-                                Grid.Row="6"
-                                Grid.Column="1"
-                                MinWidth="240"
-                                HorizontalAlignment="Left"
-                                DisplayMemberPath="Label"
-                                ItemsSource="{x:Bind ViewModel.CloseBehaviorOptions, Mode=OneWay}"
-                                SelectedValue="{x:Bind ViewModel.CloseBehavior, Mode=TwoWay}"
-                                SelectedValuePath="Value" />
-
-                            <TextBlock
-                                Grid.Row="7"
-                                VerticalAlignment="Center"
                                 Text="最大磁盘配额" />
                             <TextBox
-                                Grid.Row="7"
+                                Grid.Row="6"
                                 Grid.Column="1"
                                 PlaceholderText="如 500GB，留空使用默认 1TB"
                                 Text="{x:Bind ViewModel.MaxStorageSize, Mode=TwoWay}" />
 
                             <TextBlock
-                                Grid.Row="8"
+                                Grid.Row="7"
                                 VerticalAlignment="Center"
                                 Text="空闲回收秒数" />
                             <TextBox
-                                Grid.Row="8"
+                                Grid.Row="7"
                                 Grid.Column="1"
                                 PlaceholderText="如 30，留空使用默认"
                                 Text="{x:Bind ViewModel.IdleTimeout, Mode=TwoWay}" />
 
                             <TextBlock
-                                Grid.Row="9"
+                                Grid.Row="8"
                                 VerticalAlignment="Center"
                                 Text="端口默认绑定地址" />
                             <TextBox
-                                Grid.Row="9"
+                                Grid.Row="8"
                                 Grid.Column="1"
                                 PlaceholderText="如 127.0.0.1"
                                 Text="{x:Bind ViewModel.BindingAddress, Mode=TwoWay}" />
 
                             <TextBlock
-                                Grid.Row="10"
+                                Grid.Row="9"
                                 VerticalAlignment="Center"
                                 Text="宿主回环域名" />
                             <TextBox
-                                Grid.Row="10"
+                                Grid.Row="9"
                                 Grid.Column="1"
                                 PlaceholderText="如 host.wslc.internal，none 表示禁用"
                                 Text="{x:Bind ViewModel.HostLoopback, Mode=TwoWay}" />
 
                             <TextBlock
-                                Grid.Row="11"
+                                Grid.Row="10"
                                 VerticalAlignment="Center"
                                 Text="凭据存储方式" />
                             <ComboBox
-                                Grid.Row="11"
+                                Grid.Row="10"
                                 Grid.Column="1"
                                 MinWidth="240"
                                 HorizontalAlignment="Left"
@@ -217,7 +202,7 @@
                     BorderThickness="1"
                     CornerRadius="8">
                     <StackPanel Spacing="12">
-                        <TextBlock Style="{StaticResource SubtitleTextBlockStyle}" Text="启动与自启" />
+                        <TextBlock Style="{StaticResource SubtitleTextBlockStyle}" Text="启动与托盘" />
                         <ToggleSwitch
                             Header="开机自动启动 WSLCC"
                             IsOn="{x:Bind ViewModel.StartupEnabled, Mode=TwoWay}"
@@ -238,6 +223,19 @@
                             IsOn="{x:Bind ViewModel.MinimizeTrayNotify, Mode=TwoWay}"
                             OffContent="默认开启（弹托盘气泡提示）"
                             OnContent="最小化时提示“已最小化到系统托盘”" />
+                        <ToggleSwitch
+                            Header="托盘左键打开迷你面板"
+                            IsOn="{x:Bind ViewModel.TrayMiniPanel, Mode=TwoWay}"
+                            OffContent="左键直接打开主窗口"
+                            OnContent="左键显示或隐藏迷你容器面板（默认）" />
+                        <ComboBox
+                            MinWidth="240"
+                            HorizontalAlignment="Left"
+                            Header="关闭行为"
+                            DisplayMemberPath="Label"
+                            ItemsSource="{x:Bind ViewModel.CloseBehaviorOptions, Mode=OneWay}"
+                            SelectedValue="{x:Bind ViewModel.CloseBehavior, Mode=TwoWay}"
+                            SelectedValuePath="Value" />
                     </StackPanel>
                 </Border>
 
@@ -288,7 +286,7 @@
                                 <StackPanel Orientation="Horizontal" Spacing="8">
                                     <Button
                                         Command="{x:Bind ViewModel.CheckWslcCommand}"
-                                        Content="检查更新" />
+                                        Content="检查 WSL 更新" />
                                     <Button
                                         Command="{x:Bind ViewModel.InstallWslcCommand}"
                                         Content="{x:Bind ViewModel.WslcActionText, Mode=OneWay}" />

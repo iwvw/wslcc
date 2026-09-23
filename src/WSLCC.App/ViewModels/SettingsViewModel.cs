@@ -110,6 +110,9 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty]
     public partial bool MinimizeTrayNotify { get; set; }
 
+    [ObservableProperty]
+    public partial bool TrayMiniPanel { get; set; }
+
     public ObservableCollection<CloseBehaviorOption> CloseBehaviorOptions { get; } = new()
     {
         new("ask", L.Get("Settings.CloseBehaviorAsk")),
@@ -141,7 +144,7 @@ public partial class SettingsViewModel : ObservableObject
         ErrorMessage = string.Empty;
         WslcCurrentVersion = "-";
         WslcLatestVersion = "-";
-        WslcActionText = L.Get("Settings.CheckWslcButtonAction");
+        WslcActionText = L.Get("Settings.WslcActionInstallOrUpgrade");
         WslcActionMessage = string.Empty;
         CloseBehavior = "ask";
     }
@@ -209,6 +212,7 @@ public partial class SettingsViewModel : ObservableObject
             StartupContainersEnabled = await _host.Settings.GetStartupContainersEnabledAsync();
             AutoCheckUpdate = await _host.Settings.GetAutoCheckUpdateEnabledAsync();
             MinimizeTrayNotify = await _host.Settings.GetMinimizeNotifyEnabledAsync();
+            TrayMiniPanel = await _host.Settings.GetTrayMiniPanelEnabledAsync();
         }
         catch (Exception ex)
         {
@@ -283,6 +287,8 @@ public partial class SettingsViewModel : ObservableObject
             await _host.Settings.SetStartupContainersEnabledAsync(StartupContainersEnabled);
 await _host.Settings.SetAutoCheckUpdateEnabledAsync(AutoCheckUpdate);
             await _host.Settings.SetMinimizeNotifyEnabledAsync(MinimizeTrayNotify);
+            await _host.Settings.SetTrayMiniPanelEnabledAsync(TrayMiniPanel);
+            global::WSLCC_App.App.Main?.SetTrayMiniPanelEnabled(TrayMiniPanel);
             SaveMessage = L.Get("Settings.Saved");
             HasSaveMessage = true;
         }

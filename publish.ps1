@@ -20,7 +20,7 @@ if (Test-Path $publishDir) { Remove-Item $publishDir -Recurse -Force }
 New-Item -ItemType Directory -Path $publishDir -Force | Out-Null
 
 Write-Host "==> dotnet publish ($Configuration|$Runtime, self-contained)"
-dotnet publish $project -c $Configuration -r $Runtime --self-contained true -o $publishDir -v:m
+dotnet publish $project -c $Configuration -r $Runtime --self-contained true -p:Platform=x64 -p:PublishTrimmed=false -p:PublishReadyToRun=false -o $publishDir -v:m
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 # 裁剪多余语言资源目录（仅保留中英文）

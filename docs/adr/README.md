@@ -13,3 +13,4 @@
 | 0007 | 构建使用 VS MSBuild（amd64）规避 XamlCompiler 中文环境 bug | Accepted |
 | 0008 | 部署采用 WindowsAppSDKSelfContained + WindowsPackageType=None | Accepted |
 | 0009 | 跟进官方 wslc 2.9.8–2.9.12 能力扩展 | Accepted |
+| 0010 | 迷你容器面板（右下角托盘浮层） | Accepted |
