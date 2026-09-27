@@ -7,8 +7,10 @@ namespace WSLCC.Core.Services;
 
 public interface IWslcImageService
 {
-    Task<IReadOnlyList<ImageItem>> ListAsync(bool includeIntermediate = false, CancellationToken ct = default);
-    Task PullAsync(string imageRef, IProgress<string>? progress = null, CancellationToken ct = default);
+    Task<IReadOnlyList<ImageItem>> ListAsync(
+        bool includeIntermediate = false, bool includeDigests = false, CancellationToken ct = default);
+    Task PullAsync(
+        string imageRef, bool allTags = false, IProgress<string>? progress = null, CancellationToken ct = default);
     Task DeleteAsync(string imageRef, CancellationToken ct = default);
     Task<string> InspectAsync(string imageRef, CancellationToken ct = default);
 }
@@ -18,18 +20,24 @@ public sealed class WslcImageService : IWslcImageService
     private readonly WslcRunner _runner;
     private readonly IWslcAuditService _audit;
     private readonly IWslcHistoryService _history;
+    private readonly IWslcCapabilities _capabilities;
 
-    public WslcImageService(WslcRunner runner, IWslcAuditService audit, IWslcHistoryService history)
+    public WslcImageService(
+        WslcRunner runner, IWslcAuditService audit, IWslcHistoryService history, IWslcCapabilities capabilities)
     {
         _runner = runner;
         _audit = audit;
         _history = history;
+        _capabilities = capabilities;
     }
 
-    public async Task<IReadOnlyList<ImageItem>> ListAsync(bool includeIntermediate = false, CancellationToken ct = default)
+    public async Task<IReadOnlyList<ImageItem>> ListAsync(
+        bool includeIntermediate = false, bool includeDigests = false, CancellationToken ct = default)
     {
         var args = new List<string> { "image", "ls" };
         if (includeIntermediate) args.Add("--all");
+        if (includeDigests && await _capabilities.SupportsAsync(WslcFeature.ImageDigests, ct).ConfigureAwait(false))
+            args.Add("--digests");
         args.Add("--format");
         args.Add("json");
         var lines = await _runner.RunJsonLinesAsync(args, ct).ConfigureAwait(false);
@@ -39,12 +47,17 @@ public sealed class WslcImageService : IWslcImageService
     public Task<string> InspectAsync(string imageRef, CancellationToken ct = default)
         => _runner.RunAsync(["image", "inspect", imageRef], ct: ct);
 
-    public async Task PullAsync(string imageRef, IProgress<string>? progress = null, CancellationToken ct = default)
+    public async Task PullAsync(
+        string imageRef, bool allTags = false, IProgress<string>? progress = null, CancellationToken ct = default)
     {
         var started = DateTimeOffset.Now;
+        var args = new List<string> { "pull" };
+        if (allTags && await _capabilities.SupportsAsync(WslcFeature.PullAllTags, ct).ConfigureAwait(false))
+            args.Add("--all-tags");
+        args.Add(imageRef);
         try
         {
-            await _runner.RunStreamingAsync(["pull", imageRef], null, progress, ct).ConfigureAwait(false);
+            await _runner.RunStreamingAsync(args, null, progress, ct).ConfigureAwait(false);
             await SafeRecordAsync(async () =>
             {
                 await _audit.RecordAsync("image", "pull", imageRef, true, durationMs: ElapsedMs(started)).ConfigureAwait(false);
@@ -103,7 +116,9 @@ public sealed class WslcImageService : IWslcImageService
             JsonGet(e, "Tag") ?? "<none>",
             id,
             JsonGet(e, "Size") ?? "",
-            JsonGet(e, "CreatedAt"));
+            JsonGet(e, "CreatedAt"),
+            JsonGet(e, "CreatedSince"),
+            JsonGet(e, "Digest"));
     }
 
     private static string? JsonGet(JsonElement element, params string[] names)

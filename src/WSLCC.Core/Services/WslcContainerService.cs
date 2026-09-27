@@ -15,7 +15,7 @@ public interface IWslcContainerService
     Task RunAsync(ContainerCreateOptions options, IProgress<string>? progress = null, CancellationToken ct = default);
     Task<IReadOnlyDictionary<string, ContainerStats>> GetStatsAsync(CancellationToken ct = default);
     Task<ContainerItem?> InspectAsync(string nameOrId, bool includeSize = false, CancellationToken ct = default);
-    Task CopyAsync(string source, string target, CancellationToken ct = default);
+    Task CopyAsync(string source, string target, bool followLink = false, CancellationToken ct = default);
 }
 
 public sealed class WslcContainerService : IWslcContainerService
@@ -23,12 +23,15 @@ public sealed class WslcContainerService : IWslcContainerService
     private readonly WslcRunner _runner;
     private readonly IWslcAuditService _audit;
     private readonly IWslcHistoryService _history;
+    private readonly IWslcCapabilities _capabilities;
 
-    public WslcContainerService(WslcRunner runner, IWslcAuditService audit, IWslcHistoryService history)
+    public WslcContainerService(
+        WslcRunner runner, IWslcAuditService audit, IWslcHistoryService history, IWslcCapabilities capabilities)
     {
         _runner = runner;
         _audit = audit;
         _history = history;
+        _capabilities = capabilities;
     }
 
     public async Task<IReadOnlyList<ContainerItem>> ListAsync(bool includeSize = false, CancellationToken ct = default)
@@ -184,12 +187,17 @@ public sealed class WslcContainerService : IWslcContainerService
         }
     }
 
-    public async Task CopyAsync(string source, string target, CancellationToken ct = default)
+    public async Task CopyAsync(string source, string target, bool followLink = false, CancellationToken ct = default)
     {
         var started = DateTimeOffset.Now;
+        var args = new List<string> { "container", "cp" };
+        if (followLink && await _capabilities.SupportsAsync(WslcFeature.CopyFollowLink, ct).ConfigureAwait(false))
+            args.Add("--follow-link");
+        args.Add(source);
+        args.Add(target);
         try
         {
-            await _runner.RunAsync(["container", "cp", source, target], ct: ct).ConfigureAwait(false);
+            await _runner.RunAsync(args, ct: ct).ConfigureAwait(false);
             await SafeRecordAsync(() => _audit.RecordAsync("container", "cp", $"{source} -> {target}", true, durationMs: ElapsedMs(started))).ConfigureAwait(false);
         }
         catch (Exception ex)

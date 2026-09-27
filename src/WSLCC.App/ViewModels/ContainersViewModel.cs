@@ -198,11 +198,11 @@ public partial class ContainersViewModel : ObservableObject
         }
     }
 
-    public async Task CopyFilesAsync(string source, string target)
+    public async Task CopyFilesAsync(string source, string target, bool followLink = false)
     {
         try
         {
-            await _containers.CopyAsync(source, target);
+            await _containers.CopyAsync(source, target, followLink);
         }
         catch (Exception ex)
         {

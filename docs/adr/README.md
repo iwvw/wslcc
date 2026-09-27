@@ -14,3 +14,4 @@
 | 0008 | 部署采用 WindowsAppSDKSelfContained + WindowsPackageType=None | Accepted |
 | 0009 | 跟进官方 wslc 2.9.8–2.9.12 能力扩展 | Accepted |
 | 0010 | 迷你容器面板（右下角托盘浮层） | Accepted |
+| 0011 | 跟进官方 wslc 2.9.13 能力（digests / all-tags / follow-link / events） | Accepted |

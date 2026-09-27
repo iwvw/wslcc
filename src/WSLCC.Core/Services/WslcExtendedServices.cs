@@ -148,3 +148,129 @@ public sealed class WslcSystemService : IWslcSystemService
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool GlobalMemoryStatusEx(ref MEMORYSTATUSEX lpBuffer);
 }
+
+public sealed record WslcEventFilter(string Key, IReadOnlyList<string> Values);
+
+public sealed record WslcEventOptions(
+    string? Since = null,
+    string? Until = null,
+    IReadOnlyList<WslcEventFilter>? Filters = null);
+
+public sealed record WslcEventEntry(string Timestamp, string Type, string Action, string Target, string Attributes)
+{
+    public string TimeText => Timestamp.Length >= 19 ? Timestamp[..19].Replace('T', ' ') : Timestamp;
+
+    public string Summary => Attributes.Length == 0
+        ? $"{Type} {Action} {Target}"
+        : $"{Type} {Action} {Target} ({Attributes})";
+
+    public static WslcEventEntry? TryParse(string line)
+    {
+        var trimmed = line.TrimEnd('\r', '\n');
+        if (trimmed.Length == 0) return null;
+        var space = trimmed.IndexOf(' ');
+        if (space <= 0) return null;
+
+        var timestamp = trimmed[..space];
+        var rest = trimmed[(space + 1)..].Trim();
+
+        var attributes = string.Empty;
+        var paren = rest.IndexOf('(');
+        if (paren >= 0)
+        {
+            var close = rest.LastIndexOf(')');
+            if (close > paren)
+            {
+                attributes = rest[(paren + 1)..close];
+                rest = rest[..paren].TrimEnd();
+            }
+        }
+
+        var parts = rest.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length < 2) return null;
+        var type = parts[0];
+        var action = parts[1];
+        var target = parts.Length > 2 ? parts[2] : string.Empty;
+        return new WslcEventEntry(timestamp, type, action, target, attributes);
+    }
+}
+
+public interface IWslcEventService
+{
+    Task<bool> IsSupportedAsync(CancellationToken ct = default);
+
+    Task<IReadOnlyList<WslcEventEntry>> QueryAsync(WslcEventOptions? options = null, CancellationToken ct = default);
+
+    Task StreamAsync(
+        WslcEventOptions? options, IProgress<WslcEventEntry> progress, CancellationToken ct = default);
+}
+
+public sealed class WslcEventService : IWslcEventService
+{
+    private readonly WslcRunner _runner;
+    private readonly IWslcCapabilities _capabilities;
+
+    public WslcEventService(WslcRunner runner, IWslcCapabilities capabilities)
+    {
+        _runner = runner;
+        _capabilities = capabilities;
+    }
+
+    public Task<bool> IsSupportedAsync(CancellationToken ct = default)
+        => _capabilities.SupportsAsync(WslcFeature.Events, ct);
+
+    public async Task<IReadOnlyList<WslcEventEntry>> QueryAsync(
+        WslcEventOptions? options = null, CancellationToken ct = default)
+    {
+        var output = await _runner.RunAsync(BuildArgs(options, boundUntil: true), ct: ct).ConfigureAwait(false);
+        var entries = new List<WslcEventEntry>();
+        foreach (var line in output.Split('\n'))
+        {
+            var entry = WslcEventEntry.TryParse(line);
+            if (entry is not null) entries.Add(entry);
+        }
+        return entries;
+    }
+
+    public Task StreamAsync(
+        WslcEventOptions? options, IProgress<WslcEventEntry> progress, CancellationToken ct = default)
+    {
+        var lineProgress = new Progress<string>(line =>
+        {
+            var entry = WslcEventEntry.TryParse(line);
+            if (entry is not null) progress.Report(entry);
+        });
+        return _runner.RunStreamingAsync(
+            BuildArgs(options, boundUntil: false), new WslcRunner.RunOptions(CheckOutputForErrors: false), lineProgress, ct);
+    }
+
+    private static List<string> BuildArgs(WslcEventOptions? options, bool boundUntil)
+    {
+        var args = new List<string> { "events" };
+        var since = options?.Since;
+        var until = options?.Until;
+        if (!string.IsNullOrWhiteSpace(since)) { args.Add("--since"); args.Add(since.Trim()); }
+        if (!string.IsNullOrWhiteSpace(until))
+        {
+            args.Add("--until");
+            args.Add(until.Trim());
+        }
+        else if (boundUntil)
+        {
+            args.Add("--until");
+            args.Add((DateTimeOffset.UtcNow.ToUnixTimeSeconds() + 1).ToString());
+        }
+        if (options?.Filters is not null)
+        {
+            foreach (var filter in options.Filters)
+            {
+                foreach (var value in filter.Values)
+                {
+                    args.Add("--filter");
+                    args.Add($"{filter.Key}={value}");
+                }
+            }
+        }
+        return args;
+    }
+}

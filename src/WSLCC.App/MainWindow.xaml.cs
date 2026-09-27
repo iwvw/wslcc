@@ -367,6 +367,9 @@ public sealed partial class MainWindow : Window
             case "logs":
                 NavFrame.Navigate(typeof(LogsPage));
                 break;
+            case "events":
+                NavFrame.Navigate(typeof(EventsPage));
+                break;
             case "activity":
                 NavFrame.Navigate(typeof(ActivityPage));
                 break;

@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Page
+    x:Class="WSLCC.App.Pages.EventsPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:vm="using:WSLCC.App.ViewModels"
+    mc:Ignorable="d"
+    x:DataType="vm:EventsViewModel">
+
+    <Grid Padding="32,24,32,24" RowSpacing="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <StackPanel Spacing="2">
+                <TextBlock Style="{StaticResource TitleTextBlockStyle}" Text="事件" />
+                <TextBlock
+                    Style="{StaticResource CaptionTextBlockStyle}"
+                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                    Text="容器与网络生命周期事件（wslc events）" />
+            </StackPanel>
+            <StackPanel
+                Grid.Column="1"
+                Orientation="Horizontal"
+                Spacing="8"
+                VerticalAlignment="Center">
+                <Button
+                    Command="{x:Bind ViewModel.RefreshCommand}"
+                    Content="刷新"
+                    IsEnabled="{x:Bind ViewModel.IsSupported, Mode=OneWay}" />
+                <Button
+                    Command="{x:Bind ViewModel.ToggleStreamCommand}"
+                    Content="{x:Bind ViewModel.StreamButtonText, Mode=OneWay}"
+                    IsEnabled="{x:Bind ViewModel.IsSupported, Mode=OneWay}" />
+            </StackPanel>
+        </Grid>
+
+        <StackPanel
+            Grid.Row="1"
+            Orientation="Horizontal"
+            Spacing="12">
+            <TextBox
+                Width="220"
+                Header="起始时间"
+                PlaceholderText="Unix 秒或 RFC3339"
+                Text="{x:Bind ViewModel.SinceText, Mode=TwoWay}" />
+            <TextBox
+                Width="220"
+                Header="截止时间"
+                PlaceholderText="Unix 秒或 RFC3339"
+                Text="{x:Bind ViewModel.UntilText, Mode=TwoWay}" />
+            <TextBox
+                Width="160"
+                Header="类型筛选"
+                PlaceholderText="container / network"
+                Text="{x:Bind ViewModel.FilterTypeText, Mode=TwoWay}" />
+            <TextBox
+                Width="220"
+                Header="容器筛选"
+                PlaceholderText="容器名称或 ID"
+                Text="{x:Bind ViewModel.FilterContainerText, Mode=TwoWay}" />
+        </StackPanel>
+
+        <InfoBar
+            Grid.Row="2"
+            IsClosable="True"
+            IsOpen="{x:Bind ViewModel.HasError, Mode=OneWay}"
+            Message="{x:Bind ViewModel.ErrorMessage, Mode=OneWay}"
+            Severity="Error"
+            Title="操作失败" />
+
+        <InfoBar
+            Grid.Row="3"
+            IsClosable="False"
+            IsOpen="{x:Bind ViewModel.Unsupported, Mode=OneWay}"
+            Message="当前 wslc 版本不支持 events 命令，请升级到 WSL 2.9.13 或更高版本（wsl --update --pre-release）。"
+            Severity="Informational"
+            Title="功能不可用" />
+
+        <Grid Grid.Row="4">
+            <TextBlock
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Style="{StaticResource BodyTextBlockStyle}"
+                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                IsHitTestVisible="False"
+                Text="暂无事件记录"
+                Visibility="{x:Bind ViewModel.HasEvents, Converter={StaticResource InverseBoolToVis}, Mode=OneWay}" />
+            <ListView
+                ItemsSource="{x:Bind ViewModel.Events, Mode=OneWay}"
+                SelectionMode="None"
+                Visibility="{x:Bind ViewModel.HasEvents, Converter={StaticResource BoolToVis}, Mode=OneWay}">
+                <ListView.ItemTemplate>
+                    <DataTemplate x:DataType="vm:EventItemViewModel">
+                        <Grid ColumnSpacing="16" Padding="0,6">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="150" />
+                                <ColumnDefinition Width="110" />
+                                <ColumnDefinition Width="110" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="{x:Bind TimeText, Mode=OneWay}" />
+                            <TextBlock Grid.Column="1" Text="{x:Bind Type, Mode=OneWay}" />
+                            <TextBlock Grid.Column="2" Text="{x:Bind Action, Mode=OneWay}" />
+                            <TextBlock
+                                Grid.Column="3"
+                                IsTextSelectionEnabled="True"
+                                Text="{x:Bind Summary, Mode=OneWay}" />
+                        </Grid>
+                    </DataTemplate>
+                </ListView.ItemTemplate>
+            </ListView>
+        </Grid>
+    </Grid>
+</Page>

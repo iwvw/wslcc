@@ -73,6 +73,11 @@
                         <FontIcon Glyph="&#xE7C3;" />
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
+                <NavigationViewItem Content="事件" Tag="events">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xE7BA;" />
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
                 <NavigationViewItem Content="活动" Tag="activity">
                     <NavigationViewItem.Icon>
                         <FontIcon Glyph="&#xE81C;" />

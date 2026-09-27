@@ -16,7 +16,11 @@ public sealed partial class ImagesPage : Page
         InitializeComponent();
         ViewModel = new ImagesViewModel(WslcHost.Default.Images);
         DataContext = ViewModel;
-        Loaded += async (_, _) => await ViewModel.LoadAsync();
+        Loaded += async (_, _) =>
+        {
+            await ViewModel.InitializeCapabilitiesAsync();
+            await ViewModel.LoadAsync();
+        };
     }
 
     private async void ImageAction_Click(object sender, RoutedEventArgs e)

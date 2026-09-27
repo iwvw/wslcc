@@ -39,6 +39,18 @@ public partial class ImagesViewModel : ObservableObject
     [ObservableProperty]
     public partial bool ShowIntermediate { get; set; }
 
+    [ObservableProperty]
+    public partial bool ShowDigests { get; set; }
+
+    [ObservableProperty]
+    public partial bool PullAllTags { get; set; }
+
+    [ObservableProperty]
+    public partial bool PullAllTagsSupported { get; set; }
+
+    [ObservableProperty]
+    public partial bool DigestSupported { get; set; }
+
     public ImagesViewModel(IWslcImageService images)
     {
         _images = images;
@@ -53,13 +65,31 @@ public partial class ImagesViewModel : ObservableObject
 
     partial void OnShowIntermediateChanged(bool value) => _ = LoadAsync();
 
+    partial void OnShowDigestsChanged(bool value) => _ = LoadAsync();
+
+    public async Task InitializeCapabilitiesAsync()
+    {
+        try
+        {
+            DigestSupported = await WslcHost.Default.Capabilities
+                .SupportsAsync(WSLCC.Core.Cli.WslcFeature.ImageDigests);
+            PullAllTagsSupported = await WslcHost.Default.Capabilities
+                .SupportsAsync(WSLCC.Core.Cli.WslcFeature.PullAllTags);
+        }
+        catch
+        {
+            DigestSupported = false;
+            PullAllTagsSupported = false;
+        }
+    }
+
     public async Task LoadAsync()
     {
         IsLoading = true;
         HasError = false;
         try
         {
-            var list = await _images.ListAsync(ShowIntermediate);
+            var list = await _images.ListAsync(ShowIntermediate, ShowDigests);
             Images.Clear();
             foreach (var item in list)
                 Images.Add(new ImageItemViewModel(item));
@@ -113,7 +143,7 @@ public partial class ImagesViewModel : ObservableObject
         var progress = new Progress<string>(line => PullText = line);
         try
         {
-            await _images.PullAsync(imageRef, progress);
+            await _images.PullAsync(imageRef, PullAllTags, progress);
             PullText = L.GetFormat("ImagesPage.PulledFormat", imageRef);
             await LoadAsync();
         }

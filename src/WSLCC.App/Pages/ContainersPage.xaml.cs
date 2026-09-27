@@ -50,9 +50,15 @@ public sealed partial class ContainersPage : Page
             Header = L.Get("ContainersPage.CopyTargetHeader"),
             PlaceholderText = L.Get("ContainersPage.CopyTargetHeader"),
         };
+        var followLinkBox = new CheckBox
+        {
+            Content = L.Get("ContainersPage.CopyFollowLink"),
+            IsEnabled = await WslcHost.Default.Capabilities.SupportsAsync(WSLCC.Core.Cli.WslcFeature.CopyFollowLink),
+        };
         var panel = new StackPanel { Spacing = 12 };
         panel.Children.Add(sourceBox);
         panel.Children.Add(targetBox);
+        panel.Children.Add(followLinkBox);
         var dialog = new ContentDialog
         {
             Title = L.Get("ContainersPage.CopyTitle"),
@@ -66,7 +72,8 @@ public sealed partial class ContainersPage : Page
         if (string.IsNullOrWhiteSpace(sourceBox.Text) || string.IsNullOrWhiteSpace(targetBox.Text)) return;
         try
         {
-            await ViewModel.CopyFilesAsync(sourceBox.Text.Trim(), targetBox.Text.Trim());
+            await ViewModel.CopyFilesAsync(
+                sourceBox.Text.Trim(), targetBox.Text.Trim(), followLinkBox.IsChecked == true);
             await ShowInfoDialogAsync(L.Get("ContainersPage.CopyTitle"), L.Get("ContainersPage.CopyDone"));
         }
         catch

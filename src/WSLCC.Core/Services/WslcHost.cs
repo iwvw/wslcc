@@ -23,6 +23,10 @@ public sealed class WslcHost
 
     public IWslcSystemService System { get; }
 
+    public IWslcEventService Events { get; }
+
+    public IWslcCapabilities Capabilities { get; }
+
     public IWslcComposeService Compose { get; }
 
     public IWslcVolumeService Volumes { get; }
@@ -62,16 +66,18 @@ public sealed class WslcHost
         var composeDeployments = new ComposeDeploymentRepository(Database);
 
         SettingsFile = new WslcSettingsFileService();
+        Capabilities = new WslcCapabilities(Runner);
         Environment = new WslcEnvironmentService(Runner);
         Api = new WslcApiHost();
         Audit = new WslcAuditService(auditRepository);
         Settings = new WslcSettingsService(settingsRepository, SettingsFile);
         History = new WslcHistoryService(pullHistoryRepository, snapshotRepository);
-        Images = new WslcImageService(Runner, Audit, History);
-        Containers = new WslcContainerService(Runner, Audit, History);
+        Images = new WslcImageService(Runner, Audit, History, Capabilities);
+        Containers = new WslcContainerService(Runner, Audit, History, Capabilities);
         Logs = new WslcLogService(Runner);
         Inspect = new WslcInspectService(Runner);
         System = new WslcSystemService(Runner, SettingsFile);
+        Events = new WslcEventService(Runner, Capabilities);
         Compose = new WslcComposeService(Containers, Audit, composeDeployments);
         Volumes = new WslcVolumeService(Runner, Audit);
         Networks = new WslcNetworkService(Runner, Audit);

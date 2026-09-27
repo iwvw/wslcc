@@ -52,7 +52,11 @@ public sealed partial class ImageItemViewModel : ObservableObject
 
     public string Size => Source.Size;
 
-    public string CreatedAt => string.IsNullOrEmpty(Source.CreatedAt) ? "-" : Source.CreatedAt;
+    public string CreatedAt => string.IsNullOrEmpty(Source.DisplayCreated) ? "-" : Source.DisplayCreated;
+
+    public string Digest => string.IsNullOrEmpty(Source.DisplayDigest) ? "-" : Source.DisplayDigest;
+
+    public bool HasDigest => !string.IsNullOrEmpty(Source.DisplayDigest);
 
     public ImageItemViewModel(ImageItem source) => Source = source;
 }

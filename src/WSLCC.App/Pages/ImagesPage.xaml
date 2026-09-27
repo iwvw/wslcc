@@ -38,6 +38,10 @@
                 <CheckBox
                     Content="显示中间层镜像（--all）"
                     IsChecked="{x:Bind ViewModel.ShowIntermediate, Mode=TwoWay}" />
+                <CheckBox
+                    Content="显示摘要（--digests）"
+                    IsChecked="{x:Bind ViewModel.ShowDigests, Mode=TwoWay}"
+                    IsEnabled="{x:Bind ViewModel.DigestSupported, Mode=OneWay}" />
                 <Button
                     Click="Prune_Click"
                     Content="清理未使用" />
@@ -59,6 +63,11 @@
                 VerticalAlignment="Stretch"
                 Command="{x:Bind ViewModel.PullCommand}"
                 Content="拉取" />
+            <CheckBox
+                VerticalAlignment="Center"
+                Content="全部标签（--all-tags）"
+                IsChecked="{x:Bind ViewModel.PullAllTags, Mode=TwoWay}"
+                IsEnabled="{x:Bind ViewModel.PullAllTagsSupported, Mode=OneWay}" />
             <TextBlock
                 VerticalAlignment="Center"
                 Style="{StaticResource CaptionTextBlockStyle}"
@@ -128,6 +137,14 @@
                                         IsTextSelectionEnabled="True"
                                         TextTrimming="CharacterEllipsis"
                                         Text="{x:Bind Id}" />
+                                    <TextBlock
+                                        Style="{StaticResource CaptionTextBlockStyle}"
+                                        FontFamily="Consolas"
+                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                        IsTextSelectionEnabled="True"
+                                        TextTrimming="CharacterEllipsis"
+                                        Text="{x:Bind Digest}"
+                                        Visibility="{x:Bind HasDigest, Converter={StaticResource BoolToVis}}" />
                                     <TextBlock
                                         Style="{StaticResource CaptionTextBlockStyle}"
                                         Foreground="{ThemeResource TextFillColorSecondaryBrush}"
