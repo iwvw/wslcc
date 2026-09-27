@@ -205,7 +205,9 @@ public partial class HomeViewModel : ObservableObject
         var text = message ?? "";
         var missingWslc = text.Contains("无法识别的命令", StringComparison.OrdinalIgnoreCase)
             || text.Contains("not recognized", StringComparison.OrdinalIgnoreCase)
-            || text.Contains("not found", StringComparison.OrdinalIgnoreCase);
+            || text.Contains("not found", StringComparison.OrdinalIgnoreCase)
+            || text.Contains("未找到 wslc", StringComparison.OrdinalIgnoreCase)
+            || text.Contains("wslc.exe", StringComparison.OrdinalIgnoreCase);
         var sessionIssue = text.Contains("会话", StringComparison.OrdinalIgnoreCase)
             || text.Contains("session", StringComparison.OrdinalIgnoreCase)
             || text.Contains("VM", StringComparison.OrdinalIgnoreCase)

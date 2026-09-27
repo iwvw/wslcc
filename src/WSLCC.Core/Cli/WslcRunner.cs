@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
@@ -10,6 +11,8 @@ public sealed partial class WslcRunner
     public sealed record RunOptions(bool ThrowOnWslcError = true, bool CheckOutputForErrors = true);
 
     private string? _session;
+
+    private static string? _executablePath;
 
     public string? Session
     {
@@ -93,7 +96,7 @@ public sealed partial class WslcRunner
 
     private Process StartProcess(IReadOnlyList<string> args)
     {
-        var psi = new ProcessStartInfo("wslc.exe")
+        var psi = new ProcessStartInfo(ResolveExecutable())
         {
             RedirectStandardOutput = true,
             RedirectStandardError = true,
@@ -114,8 +117,62 @@ public sealed partial class WslcRunner
         foreach (var arg in args)
             psi.ArgumentList.Add(arg);
 
-        return Process.Start(psi)
-            ?? throw new InvalidOperationException("无法启动 wslc.exe。");
+        try
+        {
+            return Process.Start(psi)
+                ?? throw new WslcCliException("无法启动 wslc.exe。");
+        }
+        catch (Win32Exception ex) when (ex.NativeErrorCode == 2)
+        {
+            throw new WslcCliException(
+                "未找到 wslc.exe。请先安装 WSL 容器 CLI 并确保其位于 PATH 中，"
+                + "或在管理员终端执行 wsl --update --pre-release 后重启应用。"
+                + $"（搜索路径：{psi.FileName}）");
+        }
+    }
+
+    private static string ResolveExecutable()
+    {
+        var cached = Volatile.Read(ref _executablePath);
+        if (cached is not null) return cached;
+
+        var resolved = FindOnPath("wslc.exe") ?? FindInKnownLocations() ?? "wslc.exe";
+        Volatile.Write(ref _executablePath, resolved);
+        return resolved;
+    }
+
+    private static string? FindOnPath(string fileName)
+    {
+        var path = Environment.GetEnvironmentVariable("PATH");
+        if (string.IsNullOrEmpty(path)) return null;
+        foreach (var dir in path.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            try
+            {
+                var candidate = Path.Combine(dir.Trim('"'), fileName);
+                if (File.Exists(candidate)) return candidate;
+            }
+            catch
+            {
+            }
+        }
+        return null;
+    }
+
+    private static string? FindInKnownLocations()
+    {
+        var programFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
+        var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        var candidates = new[]
+        {
+            Path.Combine(programFiles, "WSL", "wslc.exe"),
+            Path.Combine(localAppData, "Microsoft", "WindowsApps", "wslc.exe"),
+        };
+        foreach (var candidate in candidates)
+        {
+            if (File.Exists(candidate)) return candidate;
+        }
+        return null;
     }
 
     private static void KillProcessTree(Process process)
