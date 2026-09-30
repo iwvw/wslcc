@@ -261,6 +261,26 @@ public partial class HomeViewModel : ObservableObject
         }
     }
 
+    public async Task StartSessionsAsync()
+    {
+        try
+        {
+            // 会话由容器命令隐式拉起：执行一次容器列表即会创建会话。
+            await _host.Containers.ListAsync();
+            var ready = await WaitForSessionReadyAsync();
+            await LoadAsync();
+            StatusMessage = ready
+                ? L.Get("Home.StartReady")
+                : L.Get("Home.StartSlow");
+            HasStatus = true;
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = ex.Message;
+            HasError = true;
+        }
+    }
+
     public async Task RestartSessionsAsync()
     {
         try

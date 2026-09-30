@@ -41,11 +41,6 @@ public partial class App : Application
 
     public static void ApplyTheme(string theme)
     {
-        if (theme == "dark")
-            Application.Current.RequestedTheme = ApplicationTheme.Dark;
-        else if (theme == "light")
-            Application.Current.RequestedTheme = ApplicationTheme.Light;
-
         CurrentTheme = theme;
 
         var window = Main;

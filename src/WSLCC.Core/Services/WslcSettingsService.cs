@@ -24,6 +24,8 @@ public interface IWslcSettingsService
     Task SetRegistryMirrorAsync(string mirror);
     Task<bool> GetMicaEnabledAsync();
     Task SetMicaEnabledAsync(bool enabled);
+    Task<int> GetBackdropStyleAsync();
+    Task SetBackdropStyleAsync(int style);
     Task<string> GetThemeAsync();
     Task SetThemeAsync(string theme);
     Task<string> GetComposeDirectoryAsync();
@@ -53,6 +55,7 @@ public sealed class WslcSettingsService : IWslcSettingsService
     private const string KeyMem = "session.memoryMb";
     private const string KeyMirror = "registry.mirror";
     private const string KeyMica = "ui.mica";
+    private const string KeyBackdropStyle = "ui.backdropStyle";
     private const string KeyTheme = "ui.theme";
     private const string KeyComposeDir = "compose.defaultDir";
     private const string KeyCloseBehavior = "app.closeBehavior";
@@ -141,6 +144,16 @@ public sealed class WslcSettingsService : IWslcSettingsService
 
     public Task SetMicaEnabledAsync(bool enabled)
         => _repository.SetAsync(KeyMica, enabled ? "1" : "0");
+
+    public async Task<int> GetBackdropStyleAsync()
+    {
+        var stored = await _repository.GetAsync(KeyBackdropStyle);
+        if (int.TryParse(stored, out var style)) return Math.Clamp(style, 0, 2);
+        return (await GetMicaEnabledAsync()) ? 1 : 2;
+    }
+
+    public Task SetBackdropStyleAsync(int style)
+        => _repository.SetAsync(KeyBackdropStyle, Math.Clamp(style, 0, 2).ToString());
 
     public async Task<string> GetThemeAsync()
         => await _repository.GetAsync(KeyTheme) ?? "default";

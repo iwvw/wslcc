@@ -18,7 +18,4 @@ public sealed partial class SettingsPage : Page
         IssueReporter.AttachTo(ErrorBar, L.Get("Feedback.Page.Settings"), () => ViewModel.ErrorMessage);
         Loaded += async (_, _) => await ViewModel.LoadAsync();
     }
-
-    private async void MicaToggle_Toggled(object sender, RoutedEventArgs e)
-        => await ViewModel.ApplyMicaAsync(MicaToggle.IsOn);
 }

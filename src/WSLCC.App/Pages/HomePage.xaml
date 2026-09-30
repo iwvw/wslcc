@@ -342,6 +342,10 @@ Glyph="&#xEB9F;" />
                                 Spacing="4">
                                 <Button
                                     Padding="8,3"
+                                    Click="StartSessions_Click"
+                                    Content="启动" />
+                                <Button
+                                    Padding="8,3"
                                     Click="TerminateSessions_Click"
                                     Content="终止" />
                                 <Button

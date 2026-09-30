@@ -1,6 +1,8 @@
 using Microsoft.UI;
+using Microsoft.UI.Composition.SystemBackdrops;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Media;
 using WSLCC.Core.Services;
 using WSLCC_App;
 using WinRT.Interop;
@@ -57,16 +59,16 @@ public sealed partial class MiniWindow : Window
         _appWindow.SetPresenter(presenter);
         _appWindow.IsShownInSwitchers = false;
 
-        var micaEnabled = true;
+        var backdropStyle = 1;
         try
         {
-            micaEnabled = WslcHost.Default.Settings.GetMicaEnabledAsync().GetAwaiter().GetResult();
+            backdropStyle = WslcHost.Default.Settings.GetBackdropStyleAsync().GetAwaiter().GetResult();
         }
         catch
         {
         }
 
-        ApplyBackdrop(micaEnabled);
+        ApplyBackdropStyle(backdropStyle);
 
         WindowChrome.SetToolWindow(_hwnd);
         WindowChrome.SetRoundCorner(_hwnd);
@@ -100,10 +102,37 @@ public sealed partial class MiniWindow : Window
         };
     }
 
-    public void ApplyBackdrop(bool acrylic)
+    public void ApplyBackdropStyle(int style)
     {
-        SystemBackdrop = acrylic ? new AlwaysActiveAcrylicBackdrop() : null;
-        Panel.SetSolidBackground(!acrylic);
+        try
+        {
+            switch (style)
+            {
+                case 1 when Microsoft.UI.Composition.SystemBackdrops.MicaController.IsSupported():
+                    SystemBackdrop = new MicaBackdrop { Kind = MicaKind.Base };
+                    Panel.SetSolidBackground(false);
+                    break;
+                case 2:
+                    SystemBackdrop = null;
+                    Panel.SetSolidBackground(true);
+                    break;
+                default:
+                    if (Microsoft.UI.Composition.SystemBackdrops.DesktopAcrylicController.IsSupported())
+                    {
+                        SystemBackdrop = new AlwaysActiveAcrylicBackdrop();
+                        Panel.SetSolidBackground(false);
+                    }
+                    else
+                    {
+                        SystemBackdrop = null;
+                        Panel.SetSolidBackground(true);
+                    }
+                    break;
+            }
+        }
+        catch
+        {
+        }
     }
 
     private void OnClosing(AppWindow sender, AppWindowClosingEventArgs args)

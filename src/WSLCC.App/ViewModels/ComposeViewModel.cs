@@ -60,6 +60,26 @@ public partial class ComposeViewModel : ObservableObject
         ErrorMessage = string.Empty;
     }
 
+    private CancellationTokenSource? _operationCts;
+
+    private CancellationToken BeginOperation()
+    {
+        _operationCts?.Dispose();
+        _operationCts = new CancellationTokenSource();
+        return _operationCts.Token;
+    }
+
+    public void CancelCurrentOperation()
+    {
+        try
+        {
+            _operationCts?.Cancel();
+        }
+        catch
+        {
+        }
+    }
+
     public AsyncRelayCommand RefreshCommand => new(LoadAsync);
 
     public async Task LoadAsync()
@@ -95,7 +115,7 @@ public partial class ComposeViewModel : ObservableObject
     {
         try
         {
-            var results = await _compose.DeployFromContentAsync(content, composeFilePath, overrideProjectName, progress, registryMirror, forcePull);
+            var results = await _compose.DeployFromContentAsync(content, composeFilePath, overrideProjectName, progress, registryMirror, forcePull, BeginOperation());
             await LoadAsync();
             return results;
         }
@@ -140,7 +160,7 @@ public partial class ComposeViewModel : ObservableObject
     {
         try
         {
-            var started = await _compose.StartProjectAsync(projectName, progress);
+            var started = await _compose.StartProjectAsync(projectName, progress, BeginOperation());
             await LoadAsync();
             return started;
         }
@@ -155,7 +175,7 @@ public partial class ComposeViewModel : ObservableObject
     {
         try
         {
-            var stopped = await _compose.StopProjectAsync(projectName, progress);
+            var stopped = await _compose.StopProjectAsync(projectName, progress, BeginOperation());
             await LoadAsync();
             return stopped;
         }
@@ -170,7 +190,7 @@ public partial class ComposeViewModel : ObservableObject
     {
         try
         {
-            var deleted = await _compose.DeleteProjectAsync(projectName, progress);
+            var deleted = await _compose.DeleteProjectAsync(projectName, progress, BeginOperation());
             await LoadAsync();
             return deleted;
         }
@@ -185,7 +205,7 @@ public partial class ComposeViewModel : ObservableObject
     {
         try
         {
-            var restarted = await _compose.RestartProjectAsync(projectName, progress);
+            var restarted = await _compose.RestartProjectAsync(projectName, progress, BeginOperation());
             await LoadAsync();
             return restarted;
         }
@@ -201,7 +221,7 @@ public partial class ComposeViewModel : ObservableObject
     {
         try
         {
-            var results = await _compose.RebuildProjectAsync(projectName, mirror, progress, forcePull);
+            var results = await _compose.RebuildProjectAsync(projectName, mirror, progress, forcePull, BeginOperation());
             await LoadAsync();
             return results;
         }

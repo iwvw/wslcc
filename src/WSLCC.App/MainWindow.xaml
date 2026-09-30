@@ -27,8 +27,8 @@
                     Margin="12,0,0,0"
                     VerticalAlignment="Center">
                     <Image
-                        Width="32"
-                        Height="32"
+                        Width="24"
+                        Height="24"
                         VerticalAlignment="Center"
                         Source="ms-appx:///Assets/AppIcon.png" />
                     <TextBlock

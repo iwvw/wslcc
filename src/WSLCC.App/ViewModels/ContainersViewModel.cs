@@ -57,6 +57,26 @@ public partial class ContainersViewModel : ObservableObject
 
     public void StopAutoRefresh() => _statsTimer.Stop();
 
+    private CancellationTokenSource? _operationCts;
+
+    private CancellationToken BeginOperation()
+    {
+        _operationCts?.Dispose();
+        _operationCts = new CancellationTokenSource();
+        return _operationCts.Token;
+    }
+
+    public void CancelCurrentOperation()
+    {
+        try
+        {
+            _operationCts?.Cancel();
+        }
+        catch
+        {
+        }
+    }
+
     private async Task RefreshStatsAsync()
     {
         try
@@ -157,7 +177,7 @@ public partial class ContainersViewModel : ObservableObject
     {
         try
         {
-            var results = await _compose.DeployAsync(composeFilePath, progress, registryMirror, forcePull);
+            var results = await _compose.DeployAsync(composeFilePath, progress, registryMirror, forcePull, BeginOperation());
             await LoadAsync();
             return results;
         }
@@ -187,7 +207,7 @@ public partial class ContainersViewModel : ObservableObject
     {
         try
         {
-            var stopped = await _compose.StopAsync(composeFilePath, progress);
+            var stopped = await _compose.StopAsync(composeFilePath, progress, BeginOperation());
             await LoadAsync();
             return stopped;
         }

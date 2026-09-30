@@ -1,5 +1,6 @@
 using System.Drawing;
 using System.Runtime.InteropServices;
+using Microsoft.UI.Composition.SystemBackdrops;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -369,18 +370,40 @@ public sealed partial class MainWindow : Window
         _miniWindow = null;
     }
 
-    public void ApplyBackdrop(bool enableMica)
+    /// <summary>背景材质：0=亚克力，1=Mica，2=纯色。不支持的会回退。</summary>
+    public void ApplyBackdropStyle(int style)
     {
-        SystemBackdrop = enableMica ? new MicaBackdrop() : null;
-        _miniWindow?.ApplyBackdrop(enableMica);
+        try
+        {
+            switch (style)
+            {
+                case 1 when Microsoft.UI.Composition.SystemBackdrops.MicaController.IsSupported():
+                    SystemBackdrop = new MicaBackdrop { Kind = MicaKind.Base };
+                    break;
+                case 2:
+                    SystemBackdrop = null;
+                    break;
+                default:
+                    if (Microsoft.UI.Composition.SystemBackdrops.DesktopAcrylicController.IsSupported())
+                        SystemBackdrop = new AlwaysActiveAcrylicBackdrop();
+                    else if (Microsoft.UI.Composition.SystemBackdrops.MicaController.IsSupported())
+                        SystemBackdrop = new MicaBackdrop { Kind = MicaKind.Base };
+                    else
+                        SystemBackdrop = null;
+                    break;
+            }
+        }
+        catch
+        {
+        }
+        _miniWindow?.ApplyBackdropStyle(style);
     }
 
     private async Task InitializeAppearanceAsync()
     {
         try
         {
-            var enabled = await WslcHost.Default.Settings.GetMicaEnabledAsync();
-            ApplyBackdrop(enabled);
+            ApplyBackdropStyle(await WslcHost.Default.Settings.GetBackdropStyleAsync());
             var theme = await WslcHost.Default.Settings.GetThemeAsync();
             global::WSLCC_App.App.ApplyTheme(theme);
         }

@@ -26,7 +26,24 @@ public partial class SettingsViewModel : ObservableObject
     public partial string RegistryMirror { get; set; }
 
     [ObservableProperty]
-    public partial bool MicaEnabled { get; set; }
+    public partial int BackdropStyle { get; set; }
+
+    [ObservableProperty]
+    public partial string Theme { get; set; }
+
+    public ObservableCollection<ThemeOption> ThemeOptions { get; } = new()
+    {
+        new("default", L.Get("Settings.ThemeSystem")),
+        new("light", L.Get("Settings.ThemeLight")),
+        new("dark", L.Get("Settings.ThemeDark")),
+    };
+
+    public ObservableCollection<BackdropOption> BackdropOptions { get; } = new()
+    {
+        new(0, L.Get("Settings.BackdropAcrylic")),
+        new(1, L.Get("Settings.BackdropMica")),
+        new(2, L.Get("Settings.BackdropSolid")),
+    };
 
     [ObservableProperty]
     public partial string ComposeDirectory { get; set; }
@@ -94,6 +111,10 @@ public partial class SettingsViewModel : ObservableObject
 
     public record CloseBehaviorOption(string Value, string Label);
 
+    public record BackdropOption(int Value, string Label);
+
+    public record ThemeOption(string Value, string Label);
+
     [ObservableProperty]
     public partial string CloseBehavior { get; set; }
 
@@ -154,6 +175,36 @@ public partial class SettingsViewModel : ObservableObject
 
     partial void OnStartMinimizedChanged(bool value)
         => AutoSave(() => _host.Settings.SetStartMinimizedAsync(value));
+
+    partial void OnBackdropStyleChanged(int value)
+    {
+        if (!IsLoaded) return;
+        _ = ApplyBackdropStyleAsync(value);
+    }
+
+    partial void OnThemeChanged(string value)
+    {
+        if (!IsLoaded) return;
+        _ = ApplyThemeAsync(value);
+    }
+
+    public async Task ApplyThemeAsync(string theme)
+    {
+        if (!IsLoaded) return;
+        try
+        {
+            Theme = theme;
+            await _host.Settings.SetThemeAsync(theme);
+            global::WSLCC_App.App.ApplyTheme(theme);
+            SaveMessage = L.Get("Settings.AppearanceApplied");
+            HasSaveMessage = true;
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = ex.Message;
+            HasError = true;
+        }
+    }
 
     partial void OnRegistryMirrorChanged(string value)
         => AutoSave(() => _host.Settings.SetRegistryMirrorAsync(value));
@@ -266,7 +317,8 @@ public partial class SettingsViewModel : ObservableObject
             HostLoopback = options.HostLoopback;
             CredentialStore = string.IsNullOrEmpty(options.CredentialStore) ? "wincred" : options.CredentialStore;
             RegistryMirror = await _host.Settings.GetRegistryMirrorAsync();
-            MicaEnabled = await _host.Settings.GetMicaEnabledAsync();
+            BackdropStyle = await _host.Settings.GetBackdropStyleAsync();
+            Theme = await _host.Settings.GetThemeAsync();
             ComposeDirectory = await _host.Settings.GetComposeDirectoryAsync();
 
             DatabasePath = _host.Database.DatabasePath;
@@ -307,15 +359,15 @@ public partial class SettingsViewModel : ObservableObject
         return null;
     }
 
-    public async Task ApplyMicaAsync(bool enabled)
+    public async Task ApplyBackdropStyleAsync(int style)
     {
         if (!IsLoaded) return;
         try
         {
-            MicaEnabled = enabled;
-            await _host.Settings.SetMicaEnabledAsync(enabled);
-            global::WSLCC_App.App.Main?.ApplyBackdrop(enabled);
-            SaveMessage = L.Get("Settings.MicaApplied");
+            BackdropStyle = style;
+            await _host.Settings.SetBackdropStyleAsync(style);
+            global::WSLCC_App.App.Main?.ApplyBackdropStyle(style);
+            SaveMessage = L.Get("Settings.AppearanceApplied");
             HasSaveMessage = true;
         }
         catch (Exception ex)

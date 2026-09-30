@@ -321,26 +321,57 @@ public sealed partial class ComposePage : Page
         {
             Title = title,
             Content = panel.Root,
-            CloseButtonText = L.Get("ComposePage.DoneButton"),
-            DefaultButton = ContentDialogButton.Close,
+            PrimaryButtonText = L.Get("ComposePage.RunInBackground"),
+            SecondaryButtonText = L.Get("ComposePage.CancelButton"),
+            DefaultButton = ContentDialogButton.None,
             XamlRoot = XamlRoot,
         };
-        var showTask = dialog.ShowAsync();
+
         var progress = panel.CreateSink();
-        try
+        var runTask = run(progress).ContinueWith(t =>
         {
-            var result = await run(progress);
-            panel.Complete(result);
+            var dispatcher = DispatcherQueue;
+            dispatcher.TryEnqueue(() =>
+            {
+                try
+                {
+                    panel.Complete(t.GetAwaiter().GetResult());
+                }
+                catch (OperationCanceledException)
+                {
+                    panel.Cancelled(L.Get("ComposePage.Cancelled"));
+                }
+                catch (Exception ex)
+                {
+                    panel.Fail(L.GetFormat("ComposePage.OperationFailed", ex.Message));
+                }
+                dialog.PrimaryButtonText = L.Get("ComposePage.DoneButton");
+                dialog.SecondaryButtonText = string.Empty;
+                dialog.IsPrimaryButtonEnabled = true;
+            });
+        }, TaskScheduler.Default);
+
+        var result = await dialog.ShowAsync();
+        if (result == ContentDialogResult.Primary)
+        {
+            if (!runTask.IsCompleted)
+            {
+                var info = new ContentDialog
+                {
+                    Title = title,
+                    Content = L.Get("ComposePage.BackgroundHint"),
+                    CloseButtonText = L.Get("ComposePage.DoneButton"),
+                    DefaultButton = ContentDialogButton.Close,
+                    XamlRoot = XamlRoot,
+                };
+                await info.ShowAsync();
+            }
         }
-        catch (OperationCanceledException)
+        else if (result == ContentDialogResult.Secondary)
         {
+            ViewModel.CancelCurrentOperation();
             panel.Cancelled(L.Get("ComposePage.Cancelled"));
         }
-        catch (Exception ex)
-        {
-            panel.Fail(L.GetFormat("ComposePage.OperationFailed", ex.Message));
-        }
-        await showTask;
     }
 
     private async Task ShowInfoAsync(string mainText, string detail)

@@ -56,6 +56,16 @@ public sealed partial class MiniPanelViewModel : ObservableObject
         try
         {
             IsSessionRunning = await DetectSessionAsync();
+            if (!IsSessionRunning)
+            {
+                // 会话未运行时不查询容器，否则会隐式把会话重新拉起。
+                ClearContainers();
+                SummaryText = string.Empty;
+                HasStatus = false;
+                StatusText = string.Empty;
+                return;
+            }
+
             var list = await _containers.ListAsync();
             IReadOnlyDictionary<string, ContainerStats> stats;
             try
@@ -96,6 +106,8 @@ public sealed partial class MiniPanelViewModel : ObservableObject
 
     public async Task RefreshStatsAsync()
     {
+        // 会话未运行时不做容器查询，否则会隐式把会话重新拉起。
+        if (!IsSessionRunning) return;
         try
         {
             var stats = await _containers.GetStatsAsync();
@@ -135,7 +147,8 @@ public sealed partial class MiniPanelViewModel : ObservableObject
         HasStatus = true;
         try
         {
-            await _host.System.ListSessionsAsync();
+            // 会话由容器命令隐式拉起：跑一次容器列表即会创建会话。
+            await _containers.ListAsync();
             var ready = await WaitForSessionAsync();
             IsSessionRunning = ready;
             StatusText = ready ? L.Get("MiniPanel.SessionStarted") : L.Get("MiniPanel.SessionStartSlow");
@@ -162,10 +175,12 @@ public sealed partial class MiniPanelViewModel : ObservableObject
         try
         {
             await _host.System.TerminateSessionsAsync();
-            await Task.Delay(1200);
-            IsSessionRunning = await DetectSessionAsync();
+            // 终止后立即判定为已停止：不再调用容器列表，否则会隐式把会话重新拉起。
+            IsSessionRunning = false;
+            ClearContainers();
+            SummaryText = string.Empty;
             StatusText = L.Get("MiniPanel.SessionStopped");
-            await LoadAsync();
+            HasStatus = true;
         }
         catch (Exception ex)
         {
@@ -176,6 +191,12 @@ public sealed partial class MiniPanelViewModel : ObservableObject
             _sessionBusy = false;
             IsSessionBusy = false;
         }
+    }
+
+    private void ClearContainers()
+    {
+        Containers.Clear();
+        HasContainers = false;
     }
 
     private async Task<bool> WaitForSessionAsync()

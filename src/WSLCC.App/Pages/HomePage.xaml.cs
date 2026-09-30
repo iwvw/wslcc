@@ -48,6 +48,9 @@ public sealed partial class HomePage : Page
         }
     }
 
+    private async void StartSessions_Click(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
+        => await ViewModel.StartSessionsAsync();
+
     private async void TerminateSessions_Click(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
     {
         var confirm = new ContentDialog

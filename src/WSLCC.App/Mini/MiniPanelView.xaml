@@ -100,6 +100,20 @@
                     Visibility="{x:Bind ViewModel.IsSessionRunning, Mode=OneWay, Converter={StaticResource BoolToVis}}"
                     ToolTipService.ToolTip="{x:Bind SessionStopTooltip}"
                     Click="SessionToggle_Click">
+                    <Button.Resources>
+                        <ResourceDictionary>
+                            <ResourceDictionary.ThemeDictionaries>
+                                <ResourceDictionary x:Key="Light">
+                                    <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#B02616" />
+                                    <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="#9B2113" />
+                                </ResourceDictionary>
+                                <ResourceDictionary x:Key="Dark">
+                                    <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#D13423" />
+                                    <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="#B02616" />
+                                </ResourceDictionary>
+                            </ResourceDictionary.ThemeDictionaries>
+                        </ResourceDictionary>
+                    </Button.Resources>
                     <FontIcon FontSize="12" Foreground="White" Glyph="&#xE71A;" />
                 </Button>
                 <Button
