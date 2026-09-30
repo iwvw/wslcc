@@ -50,6 +50,7 @@
         </Grid>
 
         <InfoBar
+            x:Name="ErrorBar"
             Grid.Row="1"
             IsClosable="True"
             IsOpen="{x:Bind ViewModel.HasError, Mode=OneWay}"
@@ -203,6 +204,11 @@
                         Width="320"
                         Header="镜像加速源"
                         PlaceholderText="如 docker.1panel.live"
+                        Visibility="Collapsed" />
+                    <CheckBox
+                        x:Name="ForcePullBox"
+                        Content="强制拉取最新镜像"
+                        VerticalAlignment="Bottom"
                         Visibility="Collapsed" />
                     <Button
                         Click="EditorLoad_Click"

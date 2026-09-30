@@ -126,7 +126,7 @@ public sealed partial class WslcRunner
         {
             throw new WslcCliException(
                 "未找到 wslc.exe。请先安装 WSL 容器 CLI 并确保其位于 PATH 中，"
-                + "或在管理员终端执行 wsl --update --pre-release 后重启应用。"
+                + "或在管理员终端执行 wsl --update 后重启应用。"
                 + $"（搜索路径：{psi.FileName}）");
         }
     }

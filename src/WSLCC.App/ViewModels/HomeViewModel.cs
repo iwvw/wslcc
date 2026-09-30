@@ -92,7 +92,7 @@ public partial class HomeViewModel : ObservableObject
     [ObservableProperty]
     public partial string SnapshotCount { get; set; }
 
-    public ObservableCollection<string> SessionList { get; } = new();
+    public ObservableCollection<WslcSessionInfo> SessionList { get; } = new();
 
     [ObservableProperty]
     public partial bool HasGuidance { get; set; }
@@ -141,12 +141,9 @@ public partial class HomeViewModel : ObservableObject
         HasError = false;
         HasGuidance = false;
         HasStatus = false;
+        HasNetworkWarning = false;
+        NetworkWarningText = "";
         StatusMessage = "";
-        var tunInterfaces = WslcNetworkDiagnostics.DetectProxyTunInterfaces();
-        HasNetworkWarning = tunInterfaces.Count > 0;
-        NetworkWarningText = HasNetworkWarning
-            ? L.GetFormat("Home.NetworkWarning", string.Join(L.Get("Home.NetworkInterfaceSeparator"), tunInterfaces))
-            : "";
         try
         {
             var info = await _host.Environment.GetEnvironmentAsync();
@@ -169,7 +166,7 @@ public partial class HomeViewModel : ObservableObject
                 ActiveSessions = server.Sessions.Count.ToString();
                 SessionList.Clear();
                 foreach (var s in server.Sessions)
-                    SessionList.Add($"{s.Name} (ID {s.Id})");
+                    SessionList.Add(s);
             }
 
             var componentsOk = info.MissingComponents.Count == 0;
@@ -208,16 +205,14 @@ public partial class HomeViewModel : ObservableObject
             || text.Contains("not found", StringComparison.OrdinalIgnoreCase)
             || text.Contains("未找到 wslc", StringComparison.OrdinalIgnoreCase)
             || text.Contains("wslc.exe", StringComparison.OrdinalIgnoreCase);
-        var sessionIssue = text.Contains("会话", StringComparison.OrdinalIgnoreCase)
-            || text.Contains("session", StringComparison.OrdinalIgnoreCase)
-            || text.Contains("VM", StringComparison.OrdinalIgnoreCase)
-            || text.Contains("TUN", StringComparison.OrdinalIgnoreCase)
-            || text.Contains("虚拟网卡", StringComparison.OrdinalIgnoreCase);
         var networkIssue = text.Contains("网络", StringComparison.OrdinalIgnoreCase)
             || text.Contains("超时", StringComparison.OrdinalIgnoreCase)
             || text.Contains("timeout", StringComparison.OrdinalIgnoreCase)
             || text.Contains("拒绝", StringComparison.OrdinalIgnoreCase)
-            || text.Contains("refused", StringComparison.OrdinalIgnoreCase);
+            || text.Contains("refused", StringComparison.OrdinalIgnoreCase)
+            || text.Contains("E_UNEXPECTED", StringComparison.OrdinalIgnoreCase)
+            || text.Contains("灾难性故障", StringComparison.OrdinalIgnoreCase)
+            || text.Contains("catastrophic", StringComparison.OrdinalIgnoreCase);
 
         GuidanceSteps.Add(missingWslc
             ? L.Get("Home.GuidanceMissingWslc")
@@ -225,12 +220,22 @@ public partial class HomeViewModel : ObservableObject
 
         GuidanceSteps.Add(L.Get("Home.GuidanceStartSession"));
 
-        GuidanceSteps.Add(sessionIssue
-            ? L.Get("Home.GuidanceTunMode")
-            : L.Get("Home.GuidanceTunFallback"));
-
         if (networkIssue)
+        {
             GuidanceSteps.Add(L.Get("Home.GuidanceNetwork"));
+            var tunInterfaces = WslcNetworkDiagnostics.DetectProxyTunInterfaces();
+            if (tunInterfaces.Count > 0)
+            {
+                HasNetworkWarning = true;
+                NetworkWarningText = L.GetFormat("Home.NetworkWarning",
+                    string.Join(L.Get("Home.NetworkInterfaceSeparator"), tunInterfaces));
+                GuidanceSteps.Add(L.Get("Home.GuidanceTunMode"));
+            }
+            else
+            {
+                GuidanceSteps.Add(L.Get("Home.GuidanceTunFallback"));
+            }
+        }
 
         GuidanceSteps.Add(L.Get("Home.GuidanceRetry"));
 

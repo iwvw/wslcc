@@ -11,6 +11,15 @@ internal enum SlideDirection
     RightToLeft,
 }
 
+internal enum SlideEasing
+{
+    /// <summary>展开：fast-out / slow-in，末尾缓缓减速（对应 Fluent cubic-bezier(0,0,0,1)）。</summary>
+    EaseOut,
+
+    /// <summary>收起：反向曲线，开始缓缓起步、末尾完成。</summary>
+    EaseIn,
+}
+
 internal static class SlideMath
 {
     private const int Overshoot = 24;
@@ -27,8 +36,13 @@ internal static class SlideMath
         };
     }
 
-    public static double EaseOutCubic(double t) => 1 - Math.Pow(1 - t, 3);
+    public static double Ease(double t, SlideEasing easing) => easing switch
+    {
+        SlideEasing.EaseIn => EaseInCubic(t),
+        _ => EaseOutCubic(t),
+    };
 
+    public static double EaseOutCubic(double t) => 1 - Math.Pow(1 - t, 3);
     public static double EaseInCubic(double t) => t * t * t;
 }
 
@@ -49,7 +63,7 @@ internal sealed class WindowSlider : IDisposable
     private int _fromAlpha;
     private int _toAlpha;
     private int _durationMs;
-    private bool _easeOut;
+    private SlideEasing _easing;
     private Action? _onCompleted;
     private int _generation;
     private volatile bool _hasRequest;
@@ -70,11 +84,11 @@ internal sealed class WindowSlider : IDisposable
 
     public bool IsAnimating { get; private set; }
 
-    public void Animate(RectInt32 from, RectInt32 to, int durationMs, bool easeOut, Action? onCompleted)
-        => Animate(from, to, 255, 255, durationMs, easeOut, onCompleted);
+    public void Animate(RectInt32 from, RectInt32 to, int durationMs, SlideEasing easing, Action? onCompleted)
+        => Animate(from, to, 255, 255, durationMs, easing, onCompleted);
 
     public void Animate(RectInt32 from, RectInt32 to, int fromAlpha, int toAlpha,
-        int durationMs, bool easeOut, Action? onCompleted)
+        int durationMs, SlideEasing easing, Action? onCompleted)
     {
         lock (_gate)
         {
@@ -84,13 +98,14 @@ internal sealed class WindowSlider : IDisposable
             _fromAlpha = fromAlpha;
             _toAlpha = toAlpha;
             _durationMs = durationMs;
-            _easeOut = easeOut;
+            _easing = easing;
             _onCompleted = onCompleted;
             _hasRequest = true;
         }
         _signal.Set();
     }
 
+    /// <summary>中断当前动画并清除完成回调（拖动手势接管时调用）。</summary>
     public void Cancel()
     {
         lock (_gate)
@@ -99,6 +114,7 @@ internal sealed class WindowSlider : IDisposable
             _hasRequest = false;
             _onCompleted = null;
         }
+        _signal.Set();
     }
 
     public void Dispose()
@@ -124,7 +140,7 @@ internal sealed class WindowSlider : IDisposable
 
                 RectInt32 from, to;
                 int fromAlpha, toAlpha, durationMs, generation;
-                bool easeOut;
+                SlideEasing easing;
                 Action? onCompleted;
                 lock (_gate)
                 {
@@ -134,13 +150,13 @@ internal sealed class WindowSlider : IDisposable
                     fromAlpha = _fromAlpha;
                     toAlpha = _toAlpha;
                     durationMs = _durationMs;
-                    easeOut = _easeOut;
+                    easing = _easing;
                     generation = _generation;
                     onCompleted = _onCompleted;
                 }
 
                 IsAnimating = true;
-                bool finished = RunAnimation(generation, from, to, fromAlpha, toAlpha, durationMs, easeOut);
+                bool finished = RunAnimation(generation, from, to, fromAlpha, toAlpha, durationMs, easing);
 
                 if (!finished)
                 {
@@ -170,16 +186,16 @@ internal sealed class WindowSlider : IDisposable
     }
 
     private bool RunAnimation(int generation, RectInt32 from, RectInt32 to,
-        int fromAlpha, int toAlpha, int durationMs, bool easeOut)
+        int fromAlpha, int toAlpha, int durationMs, SlideEasing easing)
     {
-        ApplyFrame(from, fromAlpha);
-
         bool positionMoves = from.X != to.X || from.Y != to.Y;
         bool alphaMoves = fromAlpha != toAlpha;
 
+        ApplyFrame(from, fromAlpha, alphaMoves);
+
         if (durationMs <= 0 || (!positionMoves && !alphaMoves))
         {
-            ApplyFrame(to, toAlpha);
+            ApplyFrame(to, toAlpha, alphaMoves);
             return true;
         }
 
@@ -192,30 +208,27 @@ internal sealed class WindowSlider : IDisposable
             }
 
             double progress = Math.Min(1.0, sw.Elapsed.TotalMilliseconds / durationMs);
-            double eased = easeOut ? SlideMath.EaseOutCubic(progress) : SlideMath.EaseInCubic(progress);
+            double eased = SlideMath.Ease(progress, easing);
 
             int x = (int)Math.Round(from.X + (to.X - from.X) * eased);
             int y = (int)Math.Round(from.Y + (to.Y - from.Y) * eased);
             int alpha = (int)Math.Round(fromAlpha + (toAlpha - fromAlpha) * eased);
-            ApplyFrame(new RectInt32(x, y, to.Width, to.Height), alpha);
+            ApplyFrame(new RectInt32(x, y, to.Width, to.Height), alpha, alphaMoves);
 
             if (progress >= 1.0) break;
-
-            if (DwmFlush() != 0)
-            {
-                Thread.Sleep(2);
-            }
+            if (DwmFlush() != 0) Thread.Sleep(2);
         }
 
-        ApplyFrame(to, toAlpha);
+        ApplyFrame(to, toAlpha, alphaMoves);
         return true;
     }
 
-    private void ApplyFrame(RectInt32 rect, int alpha)
+    // 仅在需要淡入淡出时才设置分层窗口 alpha：WS_EX_LAYERED 会让 Mica/亚克力背景失效。
+    private void ApplyFrame(RectInt32 rect, int alpha, bool applyAlpha)
     {
         _ = SetWindowPos(_hwnd, IntPtr.Zero, rect.X, rect.Y, rect.Width, rect.Height,
             SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
-        WindowChrome.SetWindowAlpha(_hwnd, alpha);
+        if (applyAlpha) WindowChrome.SetWindowAlpha(_hwnd, alpha);
     }
 
     [DllImport("user32.dll", SetLastError = true)]

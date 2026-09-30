@@ -113,6 +113,9 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty]
     public partial bool TrayMiniPanel { get; set; }
 
+    [ObservableProperty]
+    public partial bool StartMinimized { get; set; }
+
     public ObservableCollection<CloseBehaviorOption> CloseBehaviorOptions { get; } = new()
     {
         new("ask", L.Get("Settings.CloseBehaviorAsk")),
@@ -121,6 +124,69 @@ public partial class SettingsViewModel : ObservableObject
     };
 
     public bool HasWslcAction => true;
+
+    partial void OnStartupEnabledChanged(bool value)
+    {
+        if (!IsLoaded) return;
+        _host.Startup.SetEnabled(value);
+        NotifyAutoSaved();
+    }
+
+    partial void OnStartupContainersEnabledChanged(bool value)
+        => AutoSave(() => _host.Settings.SetStartupContainersEnabledAsync(value));
+
+    partial void OnAutoCheckUpdateChanged(bool value)
+        => AutoSave(() => _host.Settings.SetAutoCheckUpdateEnabledAsync(value));
+
+    partial void OnMinimizeTrayNotifyChanged(bool value)
+        => AutoSave(() => _host.Settings.SetMinimizeNotifyEnabledAsync(value));
+
+    partial void OnTrayMiniPanelChanged(bool value)
+    {
+        if (!IsLoaded) return;
+        _ = _host.Settings.SetTrayMiniPanelEnabledAsync(value);
+        global::WSLCC_App.App.Main?.SetTrayMiniPanelEnabled(value);
+        NotifyAutoSaved();
+    }
+
+    partial void OnCloseBehaviorChanged(string value)
+        => AutoSave(() => _host.Settings.SetCloseBehaviorAsync(value));
+
+    partial void OnStartMinimizedChanged(bool value)
+        => AutoSave(() => _host.Settings.SetStartMinimizedAsync(value));
+
+    partial void OnRegistryMirrorChanged(string value)
+        => AutoSave(() => _host.Settings.SetRegistryMirrorAsync(value));
+
+    partial void OnComposeDirectoryChanged(string value)
+        => AutoSave(() => _host.Settings.SetComposeDirectoryAsync(value));
+
+    private void AutoSave(Func<Task> save)
+    {
+        if (!IsLoaded) return;
+        _ = RunAutoSaveAsync(save);
+    }
+
+    private async Task RunAutoSaveAsync(Func<Task> save)
+    {
+        try
+        {
+            await save();
+            NotifyAutoSaved();
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = ex.Message;
+            HasError = true;
+            global::WSLCC_App.App.WriteLog($"设置自动保存失败：{ex}");
+        }
+    }
+
+    private void NotifyAutoSaved()
+    {
+        SaveMessage = L.Get("Settings.Saved");
+        HasSaveMessage = true;
+    }
 
     public SettingsViewModel(WslcHost host)
     {
@@ -213,6 +279,7 @@ public partial class SettingsViewModel : ObservableObject
             AutoCheckUpdate = await _host.Settings.GetAutoCheckUpdateEnabledAsync();
             MinimizeTrayNotify = await _host.Settings.GetMinimizeNotifyEnabledAsync();
             TrayMiniPanel = await _host.Settings.GetTrayMiniPanelEnabledAsync();
+            StartMinimized = await _host.Settings.GetStartMinimizedAsync();
         }
         catch (Exception ex)
         {
@@ -296,6 +363,7 @@ await _host.Settings.SetAutoCheckUpdateEnabledAsync(AutoCheckUpdate);
         {
             ErrorMessage = ex.Message;
             HasError = true;
+            global::WSLCC_App.App.WriteLog($"设置保存失败：{ex}");
         }
     }
 }

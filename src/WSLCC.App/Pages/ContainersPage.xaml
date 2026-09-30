@@ -48,6 +48,7 @@
 
         <StackPanel Grid.Row="1" Spacing="8">
             <InfoBar
+                x:Name="ErrorBar"
                 IsClosable="True"
                 IsOpen="{x:Bind ViewModel.HasError, Mode=OneWay}"
                 Message="{x:Bind ViewModel.ErrorMessage, Mode=OneWay}"
@@ -135,14 +136,25 @@
                                         Style="{StaticResource BodyStrongTextBlockStyle}"
                                         TextTrimming="CharacterEllipsis"
                                         Text="{x:Bind Name}" />
-                                    <Button
+                                    <StackPanel
                                         Grid.Column="2"
-                                        MinWidth="0" MinHeight="0"
-                                        Padding="8,3"
-                                        Click="ContainerAction_Click"
-                                        Content="打开"
-                                        Tag="web"
-                                        Visibility="{x:Bind HasWebUrl, Converter={StaticResource BoolToVis}, Mode=OneWay}" />
+                                        Orientation="Horizontal"
+                                        Spacing="6"
+                                        VerticalAlignment="Center">
+                                        <Image
+                                            Width="20"
+                                            Height="20"
+                                            VerticalAlignment="Center"
+                                            Source="{x:Bind IconSource, Mode=OneWay}"
+                                            Visibility="{x:Bind HasIcon, Converter={StaticResource BoolToVis}, Mode=OneWay}" />
+                                        <Button
+                                            MinWidth="0" MinHeight="0"
+                                            Padding="8,3"
+                                            Click="ContainerAction_Click"
+                                            Content="打开"
+                                            Tag="web"
+                                            Visibility="{x:Bind HasWebUrl, Converter={StaticResource BoolToVis}, Mode=OneWay}" />
+                                    </StackPanel>
                                 </Grid>
 
                                 <TextBlock

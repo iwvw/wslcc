@@ -22,6 +22,7 @@ public sealed partial class ContainersPage : Page
             WslcHost.Default.Containers, WslcHost.Default.Compose, WslcHost.Default.Settings,
             WslcHost.Default.History);
         DataContext = ViewModel;
+        IssueReporter.AttachTo(ErrorBar, L.Get("Feedback.Page.Containers"), () => ViewModel.ErrorMessage);
         Loaded += async (_, _) =>
         {
             _isActive = true;
@@ -123,6 +124,11 @@ public sealed partial class ContainersPage : Page
             Text = defaultMirror,
         };
         confirmPanel.Children.Add(mirrorBox);
+        var forcePullBox = new CheckBox
+        {
+            Content = L.Get("ContainersPage.ForcePull"),
+        };
+        confirmPanel.Children.Add(forcePullBox);
 
         var confirm = new ContentDialog
         {
@@ -136,9 +142,10 @@ public sealed partial class ContainersPage : Page
         if (await confirm.ShowAsync() != ContentDialogResult.Primary) return;
 
         var mirror = string.IsNullOrWhiteSpace(mirrorBox.Text) ? null : mirrorBox.Text.Trim();
+        var forcePull = forcePullBox.IsChecked == true;
         await ShowComposeProgressAsync(L.Get("ContainersPage.ComposeDeployProgressTitle"), async progress =>
         {
-            var results = await ViewModel.DeployComposeAsync(path, progress, mirror);
+            var results = await ViewModel.DeployComposeAsync(path, progress, mirror, forcePull);
             return string.Join(Environment.NewLine,
                 results.Select(r => L.GetFormat(
                     r.Success ? "ContainersPage.DeployResultOk" : "ContainersPage.DeployResultFail",
@@ -175,28 +182,29 @@ public sealed partial class ContainersPage : Page
 
     private async Task ShowComposeProgressAsync(string title, Func<IProgress<string>, Task<string>> run)
     {
-        var statusText = new TextBlock { Text = L.Get("ContainersPage.ProgressRunning") };
+        var panel = new WSLCC.App.Controls.OperationProgressPanel(L.Get("ContainersPage.ProgressRunning"));
         var dialog = new ContentDialog
         {
             Title = title,
-            Content = statusText,
+            Content = panel.Root,
             CloseButtonText = L.Get("ContainersPage.DoneButton"),
             DefaultButton = ContentDialogButton.Close,
             XamlRoot = XamlRoot,
         };
         var showTask = dialog.ShowAsync();
-        var progress = new Progress<string>(line => statusText.Text = line);
+        var progress = panel.CreateSink();
         try
         {
-            statusText.Text = await run(progress);
+            var result = await run(progress);
+            panel.Complete(result);
         }
         catch (OperationCanceledException)
         {
-            statusText.Text = L.Get("ContainersPage.Cancelled");
+            panel.Cancelled(L.Get("ContainersPage.Cancelled"));
         }
         catch (Exception ex)
         {
-            statusText.Text = L.GetFormat("ContainersPage.OperationFailed", ex.Message);
+            panel.Fail(L.GetFormat("ContainersPage.OperationFailed", ex.Message));
         }
         await showTask;
     }
@@ -358,6 +366,12 @@ public sealed partial class ContainersPage : Page
         var dnsBox = new TextBox { Header = L.Get("ContainersPage.CreateDnsPlaceholder") };
         var ulimitsBox = new TextBox { Header = L.Get("ContainersPage.CreateUlimitsPlaceholder") };
         var pullBox = new TextBox { Header = L.Get("ContainersPage.CreatePullPlaceholder") };
+        var mountBox = new TextBox { Header = L.Get("ContainersPage.CreateMountPlaceholder") };
+        var envFileBox = new TextBox { Header = L.Get("ContainersPage.CreateEnvFilePlaceholder") };
+        var domainnameBox = new TextBox { Header = L.Get("ContainersPage.CreateDomainnamePlaceholder") };
+        var networkAliasBox = new TextBox { Header = L.Get("ContainersPage.CreateNetworkAliasPlaceholder") };
+        var noHealthcheckBox = new CheckBox { Content = L.Get("ContainersPage.CreateNoHealthcheck") };
+        var publishAllBox = new CheckBox { Content = L.Get("ContainersPage.CreatePublishAll") };
 
         var advancedPanel = new StackPanel { Spacing = 12 };
         advancedPanel.Children.Add(new TextBlock
@@ -367,8 +381,9 @@ public sealed partial class ContainersPage : Page
         });
         foreach (var element in new FrameworkElement[]
         {
-            cpusBox, memoryBox, hostnameBox, workdirBox, userBox, entrypointBox, networkBox,
-            stopTimeoutBox, shmSizeBox, tmpfsBox, gpusBox,
+            cpusBox, memoryBox, hostnameBox, domainnameBox, workdirBox, userBox, entrypointBox, networkBox,
+            networkAliasBox, stopTimeoutBox, shmSizeBox, tmpfsBox, mountBox, envFileBox, gpusBox,
+            publishAllBox, noHealthcheckBox,
             healthCmdBox, healthIntervalBox, healthTimeoutBox, healthRetriesBox, healthStartPeriodBox,
             dnsBox, ulimitsBox, pullBox,
         })
@@ -440,7 +455,13 @@ public sealed partial class ContainersPage : Page
             HealthRetries: Trim(healthRetriesBox.Text),
             HealthStartPeriod: Trim(healthStartPeriodBox.Text),
             Dns: SplitList(dnsBox.Text),
-            Ulimits: SplitList(ulimitsBox.Text));
+            Ulimits: SplitList(ulimitsBox.Text),
+            Mounts: SplitList(mountBox.Text),
+            EnvFiles: SplitList(envFileBox.Text),
+            Domainname: Trim(domainnameBox.Text),
+            NetworkAliases: SplitList(networkAliasBox.Text),
+            PublishAll: publishAllBox.IsChecked == true,
+            NoHealthcheck: noHealthcheckBox.IsChecked == true);
     }
 
     private static string? Trim(string? text)

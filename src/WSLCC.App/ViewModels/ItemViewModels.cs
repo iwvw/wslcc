@@ -124,6 +124,28 @@ public sealed partial class ContainerItemViewModel : ObservableObject
 
     public bool HasWebUrl => WebUrl is not null;
 
+    [ObservableProperty]
+    public partial Microsoft.UI.Xaml.Media.ImageSource? IconSource { get; set; }
+
+    [ObservableProperty]
+    public partial bool HasIcon { get; set; }
+
+    private string? _iconUrlResolved;
+
+    private bool NeedsIconResolution =>
+        IsRunning
+        && WebUrl is not null
+        && !string.Equals(_iconUrlResolved, WebUrl, StringComparison.OrdinalIgnoreCase);
+
+    public void ApplyIcon(Microsoft.UI.Xaml.Media.ImageSource? source)
+    {
+        _iconUrlResolved = WebUrl;
+        IconSource = source;
+        HasIcon = source is not null;
+    }
+
+    public bool ShouldResolveIcon() => NeedsIconResolution;
+
     public ContainerItemViewModel(ContainerItem source, ContainerStats? stats = null)
     {
         Source = source;

@@ -15,6 +15,7 @@ public partial class ContainersViewModel : ObservableObject
     private readonly IWslcSettingsService _settings;
     private readonly IWslcHistoryService _history;
     private readonly DispatcherTimer _statsTimer;
+    private readonly WSLCC.App.Services.ContainerIconService _icons = WSLCC.App.Services.ContainerIconService.Shared;
 
     public ObservableCollection<ContainerItemViewModel> Containers { get; } = new();
 
@@ -79,7 +80,6 @@ public partial class ContainersViewModel : ObservableObject
     {
         IsLoading = true;
         HasError = false;
-        CheckNetworkWarning();
         try
         {
             var list = await _containers.ListAsync();
@@ -97,6 +97,7 @@ public partial class ContainersViewModel : ObservableObject
                 item.UpdateStats(stat);
             }
             HasContainers = Containers.Count > 0;
+            _ = ResolveIconsAsync();
         }
         catch (Exception ex)
         {
@@ -140,7 +141,6 @@ public partial class ContainersViewModel : ObservableObject
 
     public Task StartContainerAsync(ContainerItemViewModel item)
         => ExecuteContainerOpAsync(item, c => _containers.StartAsync(c.Source.Name));
-
     public Task StopContainerAsync(ContainerItemViewModel item)
         => ExecuteContainerOpAsync(item, c => _containers.StopAsync(c.Source.Name));
 
@@ -153,11 +153,11 @@ public partial class ContainersViewModel : ObservableObject
     public Task<string> GetRegistryMirrorAsync() => _settings.GetRegistryMirrorAsync();
 
     public async Task<IReadOnlyList<ComposeDeploymentResult>> DeployComposeAsync(
-        string composeFilePath, IProgress<string>? progress = null, string? registryMirror = null)
+        string composeFilePath, IProgress<string>? progress = null, string? registryMirror = null, bool forcePull = false)
     {
         try
         {
-            var results = await _compose.DeployAsync(composeFilePath, progress, registryMirror);
+            var results = await _compose.DeployAsync(composeFilePath, progress, registryMirror, forcePull);
             await LoadAsync();
             return results;
         }
@@ -265,19 +265,58 @@ public partial class ContainersViewModel : ObservableObject
         }
     }
 
-    private void CheckNetworkWarning()
-    {
-        var tunInterfaces = WslcNetworkDiagnostics.DetectProxyTunInterfaces();
-        HasNetworkWarning = tunInterfaces.Count > 0;
-        NetworkWarningText = HasNetworkWarning
-            ? L.GetFormat("ContainersPage.NetworkWarning",
-                string.Join(L.Get("ContainersPage.ListSeparator"), tunInterfaces))
-            : "";
-    }
-
     private void ShowError(Exception ex)
     {
         ErrorMessage = ex.Message;
         HasError = true;
+        CheckNetworkWarning(ex.Message);
+    }
+
+    private async Task ResolveIconsAsync()
+    {
+        foreach (var item in Containers.ToList())
+        {
+            if (!item.ShouldResolveIcon()) continue;
+            var url = item.WebUrl;
+            if (url is null) continue;
+            try
+            {
+                var cached = _icons.TryGetCached(url);
+                var path = cached ?? await _icons.ResolveAsync(url);
+                if (path is null)
+                {
+                    item.ApplyIcon(null);
+                    continue;
+                }
+                var source = await WSLCC.App.Services.ContainerIconLoader.LoadAsync(path);
+                item.ApplyIcon(source);
+            }
+            catch (Exception ex)
+            {
+                global::WSLCC_App.App.WriteLog($"容器图标解析失败（{item.Name}）：{ex}");
+                item.ApplyIcon(null);
+            }
+        }
+    }
+
+    private void CheckNetworkWarning(string message)
+    {
+        HasNetworkWarning = false;
+        NetworkWarningText = "";
+        var text = message ?? "";
+        var networkIssue = text.Contains("E_UNEXPECTED", StringComparison.OrdinalIgnoreCase)
+            || text.Contains("灾难性故障", StringComparison.OrdinalIgnoreCase)
+            || text.Contains("catastrophic", StringComparison.OrdinalIgnoreCase)
+            || text.Contains("网络", StringComparison.OrdinalIgnoreCase)
+            || text.Contains("超时", StringComparison.OrdinalIgnoreCase)
+            || text.Contains("timeout", StringComparison.OrdinalIgnoreCase)
+            || text.Contains("拒绝", StringComparison.OrdinalIgnoreCase)
+            || text.Contains("refused", StringComparison.OrdinalIgnoreCase);
+        if (!networkIssue) return;
+        var tunInterfaces = WslcNetworkDiagnostics.DetectProxyTunInterfaces();
+        if (tunInterfaces.Count == 0) return;
+        HasNetworkWarning = true;
+        NetworkWarningText = L.GetFormat("ContainersPage.NetworkWarning",
+            string.Join(L.Get("ContainersPage.ListSeparator"), tunInterfaces));
     }
 }

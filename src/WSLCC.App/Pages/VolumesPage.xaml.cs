@@ -15,6 +15,7 @@ public sealed partial class VolumesPage : Page
         InitializeComponent();
         ViewModel = new VolumesViewModel(WslcHost.Default.Volumes);
         DataContext = ViewModel;
+        IssueReporter.AttachTo(ErrorBar, L.Get("Feedback.Page.Volumes"), () => ViewModel.ErrorMessage);
         Loaded += async (_, _) => await ViewModel.LoadAsync();
     }
 

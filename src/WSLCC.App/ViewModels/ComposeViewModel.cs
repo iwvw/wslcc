@@ -91,11 +91,11 @@ public partial class ComposeViewModel : ObservableObject
     public Task SetComposeDirectoryAsync(string directory) => _settings.SetComposeDirectoryAsync(directory);
 
     public async Task<IReadOnlyList<ComposeDeploymentResult>> DeployFromContentAsync(
-        string content, string? composeFilePath, string? overrideProjectName = null, IProgress<string>? progress = null, string? registryMirror = null)
+        string content, string? composeFilePath, string? overrideProjectName = null, IProgress<string>? progress = null, string? registryMirror = null, bool forcePull = false)
     {
         try
         {
-            var results = await _compose.DeployFromContentAsync(content, composeFilePath, overrideProjectName, progress, registryMirror);
+            var results = await _compose.DeployFromContentAsync(content, composeFilePath, overrideProjectName, progress, registryMirror, forcePull);
             await LoadAsync();
             return results;
         }
@@ -197,11 +197,11 @@ public partial class ComposeViewModel : ObservableObject
     }
 
     public async Task<IReadOnlyList<ComposeDeploymentResult>> RebuildProjectAsync(
-        string projectName, string? mirror, IProgress<string>? progress = null)
+        string projectName, string? mirror, IProgress<string>? progress = null, bool forcePull = false)
     {
         try
         {
-            var results = await _compose.RebuildProjectAsync(projectName, mirror, progress);
+            var results = await _compose.RebuildProjectAsync(projectName, mirror, progress, forcePull);
             await LoadAsync();
             return results;
         }

@@ -40,6 +40,7 @@
                     Severity="Success"
                     Title="提示" />
                 <InfoBar
+                    x:Name="ErrorBar"
                     IsClosable="True"
                     IsOpen="{x:Bind ViewModel.HasError, Mode=OneWay}"
                     Message="{x:Bind ViewModel.ErrorMessage, Mode=OneWay}"
@@ -228,6 +229,11 @@
                             IsOn="{x:Bind ViewModel.TrayMiniPanel, Mode=TwoWay}"
                             OffContent="左键直接打开主窗口"
                             OnContent="左键显示或隐藏迷你容器面板（默认）" />
+                        <ToggleSwitch
+                            Header="启动时最小化到托盘"
+                            IsOn="{x:Bind ViewModel.StartMinimized, Mode=TwoWay}"
+                            OffContent="默认关闭（启动即显示主窗口）"
+                            OnContent="启动后直接最小化到托盘，仅保留迷你面板" />
                         <ComboBox
                             MinWidth="240"
                             HorizontalAlignment="Left"

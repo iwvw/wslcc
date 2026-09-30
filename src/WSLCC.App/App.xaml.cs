@@ -80,6 +80,21 @@ public partial class App : Application
         _ = RestoreContainersIfEnabledAsync();
         _ = AutoCheckUpdateAsync();
         _ = MigrateLegacyComposeAsync();
+        _ = ApplyStartMinimizedAsync();
+    }
+
+    private async Task ApplyStartMinimizedAsync()
+    {
+        try
+        {
+            if (!await WslcHost.Default.Settings.GetStartMinimizedAsync().ConfigureAwait(false)) return;
+            await Task.Delay(200).ConfigureAwait(false);
+            Main?.DispatcherQueue.TryEnqueue(() => Main?.StartMinimizedToTray());
+        }
+        catch (Exception ex)
+        {
+            WriteLog($"启动最小化失败：{ex}");
+        }
     }
 
     private static async Task ApplySessionFromSettingsAsync()

@@ -16,6 +16,7 @@ public sealed partial class ImagesPage : Page
         InitializeComponent();
         ViewModel = new ImagesViewModel(WslcHost.Default.Images);
         DataContext = ViewModel;
+        IssueReporter.AttachTo(ErrorBar, L.Get("Feedback.Page.Images"), () => ViewModel.ErrorMessage);
         Loaded += async (_, _) =>
         {
             await ViewModel.InitializeCapabilitiesAsync();

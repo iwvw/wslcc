@@ -41,6 +41,7 @@
         </Grid>
 
         <InfoBar
+            x:Name="ErrorBar"
             Grid.Row="1"
             IsClosable="True"
             IsOpen="{x:Bind ViewModel.HasError, Mode=OneWay}"

@@ -73,6 +73,7 @@
         </StackPanel>
 
         <InfoBar
+            x:Name="ErrorBar"
             Grid.Row="2"
             IsClosable="True"
             IsOpen="{x:Bind ViewModel.HasError, Mode=OneWay}"
@@ -84,7 +85,7 @@
             Grid.Row="3"
             IsClosable="False"
             IsOpen="{x:Bind ViewModel.Unsupported, Mode=OneWay}"
-            Message="当前 wslc 版本不支持 events 命令，请升级到 WSL 2.9.13 或更高版本（wsl --update --pre-release）。"
+            Message="当前 wslc 版本不支持 events 命令，请升级到 WSL 2.9.13 或更高版本（wsl --update）。"
             Severity="Informational"
             Title="功能不可用" />
 

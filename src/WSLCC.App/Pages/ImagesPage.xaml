@@ -76,6 +76,7 @@
         </StackPanel>
 
         <InfoBar
+            x:Name="ErrorBar"
             Grid.Row="2"
             IsClosable="True"
             IsOpen="{x:Bind ViewModel.HasError, Mode=OneWay}"

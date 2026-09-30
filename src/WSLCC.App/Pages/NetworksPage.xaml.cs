@@ -16,6 +16,7 @@ public sealed partial class NetworksPage : Page
         InitializeComponent();
         ViewModel = new NetworksViewModel(WslcHost.Default.Networks);
         DataContext = ViewModel;
+        IssueReporter.AttachTo(ErrorBar, L.Get("Feedback.Page.Networks"), () => ViewModel.ErrorMessage);
         Loaded += async (_, _) => await ViewModel.LoadAsync();
     }
 

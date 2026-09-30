@@ -2,6 +2,7 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Navigation;
 using WSLCC.App.ViewModels;
 using WSLCC.Core.Services;
+using WSLCC_App;
 
 namespace WSLCC.App.Pages;
 
@@ -16,6 +17,7 @@ public sealed partial class LogsPage : Page
         InitializeComponent();
         ViewModel = new LogsViewModel(WslcHost.Default.Logs, WslcHost.Default.Containers);
         DataContext = ViewModel;
+        IssueReporter.AttachTo(ErrorBar, L.Get("Feedback.Page.Logs"), () => ViewModel.ErrorMessage);
         Loaded += async (_, _) =>
         {
             await ViewModel.LoadAsync();

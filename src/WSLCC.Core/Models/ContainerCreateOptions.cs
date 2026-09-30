@@ -29,4 +29,10 @@ public sealed record ContainerCreateOptions(
     string? HealthRetries = null,
     string? HealthStartPeriod = null,
     IReadOnlyList<string>? Dns = null,
-    IReadOnlyList<string>? Ulimits = null);
+    IReadOnlyList<string>? Ulimits = null,
+    IReadOnlyList<string>? Mounts = null,
+    IReadOnlyList<string>? EnvFiles = null,
+    string? Domainname = null,
+    IReadOnlyList<string>? NetworkAliases = null,
+    bool PublishAll = false,
+    bool NoHealthcheck = false);

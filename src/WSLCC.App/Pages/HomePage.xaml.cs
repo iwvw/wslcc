@@ -14,7 +14,38 @@ public sealed partial class HomePage : Page
         InitializeComponent();
         ViewModel = new HomeViewModel(WslcHost.Default);
         DataContext = ViewModel;
+        IssueReporter.AttachTo(ErrorBar, L.Get("Feedback.Page.Home"), () => ViewModel.ErrorMessage);
         Loaded += async (_, _) => await ViewModel.LoadAsync();
+    }
+
+    private void OpenSessionTerminal_Click(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
+    {
+        if (sender is not Microsoft.UI.Xaml.FrameworkElement { Tag: string sessionName } || string.IsNullOrWhiteSpace(sessionName))
+            return;
+        var target = sessionName.Contains(' ') ? $"\"{sessionName}\"" : sessionName;
+        var command = $"wslc --session {target} system session shell";
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("wt.exe", $"-- {command}")
+            {
+                UseShellExecute = false,
+            });
+        }
+        catch (Exception ex)
+        {
+            global::WSLCC_App.App.WriteLog($"会话终端启动失败：{ex}");
+            try
+            {
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("cmd.exe", $"/c start {command}")
+                {
+                    UseShellExecute = false,
+                });
+            }
+            catch (Exception fallbackEx)
+            {
+                global::WSLCC_App.App.WriteLog($"cmd 会话终端启动失败：{fallbackEx}");
+            }
+        }
     }
 
     private async void TerminateSessions_Click(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)

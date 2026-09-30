@@ -2,7 +2,7 @@
 # 该包仅随 microsoft/WSL 的 GitHub Release 发布，不在 nuget.org 上，
 # 因此需要显式下载后由 nuget.config 中的 wsl-containers 本地源提供。
 param(
-    [string]$Version = "2.9.13"
+    [string]$Version = "3.0.1"
 )
 
 $ErrorActionPreference = "Stop"

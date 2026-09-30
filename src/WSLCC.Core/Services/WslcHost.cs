@@ -78,7 +78,7 @@ public sealed class WslcHost
         Inspect = new WslcInspectService(Runner);
         System = new WslcSystemService(Runner, SettingsFile);
         Events = new WslcEventService(Runner, Capabilities);
-        Compose = new WslcComposeService(Containers, Audit, composeDeployments);
+        Compose = new WslcComposeService(Containers, Audit, composeDeployments, Settings, Images);
         Volumes = new WslcVolumeService(Runner, Audit);
         Networks = new WslcNetworkService(Runner, Audit);
         Prune = new WslcPruneService(Runner, Audit);

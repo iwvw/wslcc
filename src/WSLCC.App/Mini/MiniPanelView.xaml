@@ -12,17 +12,34 @@
     <UserControl.Resources>
         <converters:BoolToVisibilityConverter x:Key="BoolToVis" />
         <converters:InverseBoolToVisibilityConverter x:Key="InverseBoolToVis" />
-        <Storyboard x:Name="RefreshSpin" RepeatBehavior="Forever">
-            <DoubleAnimation
-                Storyboard.TargetName="RefreshRotate"
-                Storyboard.TargetProperty="Angle"
-                From="0"
-                To="360"
-                Duration="0:0:0.9" />
-        </Storyboard>
+        <Style x:Key="MiniIconButtonStyle" TargetType="Button" BasedOn="{StaticResource DefaultButtonStyle}">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="CornerRadius" Value="4" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Width" Value="28" />
+            <Setter Property="Height" Value="28" />
+            <Setter Property="MinWidth" Value="0" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="Foreground" Value="{ThemeResource TextFillColorPrimaryBrush}" />
+            <Setter Property="BackgroundSizing" Value="InnerBorderEdge" />
+        </Style>
+        <Style x:Key="MiniStopButtonStyle" TargetType="Button" BasedOn="{StaticResource DefaultButtonStyle}">
+            <Setter Property="Background" Value="#C42B1C" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="CornerRadius" Value="4" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Width" Value="28" />
+            <Setter Property="Height" Value="28" />
+            <Setter Property="MinWidth" Value="0" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="BackgroundSizing" Value="InnerBorderEdge" />
+        </Style>
     </UserControl.Resources>
 
-    <Grid Padding="18,14,18,16" RowSpacing="12">
+    <Grid x:Name="RootGrid" Padding="16,12,16,12" RowSpacing="10" Background="Transparent">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
@@ -32,7 +49,7 @@
         <Border
             x:Name="SolidBackdrop"
             Grid.RowSpan="3"
-            Margin="-18,-14,-18,-16"
+            Margin="-16,-12,-16,-12"
             Background="{ThemeResource SolidBackgroundFillColorBaseBrush}"
             Visibility="Collapsed" />
 
@@ -40,6 +57,8 @@
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
@@ -54,31 +73,61 @@
                 VerticalAlignment="Center"
                 Style="{StaticResource BodyStrongTextBlockStyle}"
                 Text="{x:Bind Title}" />
-            <TextBlock
-                Grid.Column="2"
-                VerticalAlignment="Center"
-                Style="{StaticResource CaptionTextBlockStyle}"
-                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                Text="{x:Bind ViewModel.SummaryText, Mode=OneWay}" />
+            <Grid Grid.Column="2" Width="28" Height="28" VerticalAlignment="Center">
+                <ProgressRing
+                    Width="16" Height="16"
+                    HorizontalAlignment="Center" VerticalAlignment="Center"
+                    IsActive="{x:Bind ViewModel.IsRefreshing, Mode=OneWay}"
+                    Visibility="{x:Bind ViewModel.IsRefreshing, Mode=OneWay, Converter={StaticResource BoolToVis}}" />
+                <Button
+                    x:Name="RefreshButton"
+                    Style="{StaticResource MiniIconButtonStyle}"
+                    Visibility="{x:Bind ViewModel.IsRefreshing, Mode=OneWay, Converter={StaticResource InverseBoolToVis}}"
+                    ToolTipService.ToolTip="{x:Bind RefreshTooltip}"
+                    Click="Refresh_Click">
+                    <FontIcon FontSize="13" Glyph="&#xE72C;" />
+                </Button>
+            </Grid>
+            <Grid Grid.Column="3" Width="28" Height="28" VerticalAlignment="Center">
+                <ProgressRing
+                    Width="16" Height="16"
+                    HorizontalAlignment="Center" VerticalAlignment="Center"
+                    IsActive="{x:Bind ViewModel.IsSessionBusy, Mode=OneWay}"
+                    Visibility="{x:Bind ViewModel.IsSessionBusy, Mode=OneWay, Converter={StaticResource BoolToVis}}" />
+                <Button
+                    x:Name="SessionStopButton"
+                    Style="{StaticResource MiniStopButtonStyle}"
+                    Visibility="{x:Bind ViewModel.IsSessionRunning, Mode=OneWay, Converter={StaticResource BoolToVis}}"
+                    ToolTipService.ToolTip="{x:Bind SessionStopTooltip}"
+                    Click="SessionToggle_Click">
+                    <FontIcon FontSize="12" Foreground="White" Glyph="&#xE71A;" />
+                </Button>
+                <Button
+                    x:Name="SessionStartButton"
+                    Style="{StaticResource MiniIconButtonStyle}"
+                    Visibility="{x:Bind ViewModel.IsSessionRunning, Mode=OneWay, Converter={StaticResource InverseBoolToVis}}"
+                    ToolTipService.ToolTip="{x:Bind SessionStartTooltip}"
+                    Click="SessionToggle_Click">
+                    <FontIcon FontSize="12" Glyph="&#xE768;" />
+                </Button>
+            </Grid>
             <Button
-                x:Name="RefreshButton"
-                Grid.Column="3"
+                Grid.Column="4"
                 MinWidth="0"
                 MinHeight="0"
-                Padding="6,4"
-                Background="Transparent"
-                BorderThickness="0"
-                Click="Refresh_Click"
-                ToolTipService.ToolTip="{x:Bind RefreshTooltip}">
-                <FontIcon
-                    x:Name="RefreshIcon"
-                    FontSize="13"
-                    Glyph="&#xE72C;"
-                    RenderTransformOrigin="0.5,0.5">
-                    <FontIcon.RenderTransform>
-                        <RotateTransform x:Name="RefreshRotate" />
-                    </FontIcon.RenderTransform>
-                </FontIcon>
+                Padding="10,4"
+                VerticalAlignment="Center"
+                ToolTipService.ToolTip="打开主界面"
+                Click="OpenFull_Click"
+                Content="{x:Bind OpenFullText}" />
+            <Button
+                Grid.Column="5"
+                Width="28" Height="28" Padding="0"
+                VerticalAlignment="Center"
+                HorizontalContentAlignment="Center"
+                ToolTipService.ToolTip="收起"
+                Click="Collapse_Click">
+                <FontIcon FontSize="12" Glyph="&#xE70D;" />
             </Button>
         </Grid>
 
@@ -120,7 +169,7 @@
                             CornerRadius="6">
                             <Grid ColumnSpacing="8" RowSpacing="2">
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="14" />
                                     <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
@@ -131,12 +180,14 @@
                                 </Grid.RowDefinitions>
 
                                 <Ellipse
+                                    Grid.Column="0"
                                     Width="8" Height="8"
                                     HorizontalAlignment="Center"
                                     VerticalAlignment="Center"
                                     Fill="{ThemeResource SystemFillColorSuccessBrush}"
                                     Visibility="{x:Bind IsRunning, Mode=OneWay, Converter={StaticResource BoolToVis}}" />
                                 <Ellipse
+                                    Grid.Column="0"
                                     Width="8" Height="8"
                                     HorizontalAlignment="Center"
                                     VerticalAlignment="Center"
@@ -154,7 +205,14 @@
                                 <StackPanel
                                     Grid.Column="2"
                                     Orientation="Horizontal"
-                                    Spacing="2">
+                                    Spacing="6"
+                                    VerticalAlignment="Center">
+                                    <Image
+                                        Width="20"
+                                        Height="20"
+                                        VerticalAlignment="Center"
+                                        Source="{x:Bind IconSource, Mode=OneWay}"
+                                        Visibility="{x:Bind HasIcon, Mode=OneWay, Converter={StaticResource BoolToVis}}" />
                                     <Button
                                         MinWidth="0"
                                         MinHeight="0"
@@ -225,14 +283,15 @@
                 Style="{StaticResource CaptionTextBlockStyle}"
                 Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                 TextTrimming="CharacterEllipsis"
-                Text="{x:Bind ViewModel.StatusText, Mode=OneWay}" />
-            <Button
+                Text="{x:Bind ViewModel.SummaryText, Mode=OneWay}" />
+            <TextBlock
                 Grid.Column="1"
-                MinWidth="0"
-                MinHeight="0"
-                Padding="8,3"
-                Click="OpenFull_Click"
-                Content="{x:Bind OpenFullText}" />
+                VerticalAlignment="Center"
+                Style="{StaticResource CaptionTextBlockStyle}"
+                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                TextTrimming="CharacterEllipsis"
+                Text="{x:Bind ViewModel.StatusText, Mode=OneWay}"
+                Visibility="{x:Bind ViewModel.HasStatus, Mode=OneWay, Converter={StaticResource BoolToVis}}" />
         </Grid>
     </Grid>
 </UserControl>

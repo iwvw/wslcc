@@ -38,6 +38,7 @@ public sealed partial class MainWindow : Window
         CreateTrayIcon();
         _ = RefreshTrayPreferencesAsync();
 
+        Activated += (_, _) => RestorePageContent();
         AppWindow.Closing += OnAppWindowClosing;
     }
 
@@ -209,6 +210,7 @@ public sealed partial class MainWindow : Window
     private void MinimizeToTray()
     {
         AppWindow.Hide();
+        ReleasePageContent();
         try
         {
             var notifyEnabled = WslcHost.Default.Settings.GetMinimizeNotifyEnabledAsync().GetAwaiter().GetResult();
@@ -217,6 +219,59 @@ public sealed partial class MainWindow : Window
         }
         catch
         {
+        }
+    }
+
+    private Type? _lastPageType;
+
+    private void CaptureCurrentPage()
+    {
+        if (NavFrame.Content is not null)
+            _lastPageType = NavFrame.Content.GetType();
+    }
+
+    private void ReleasePageContent()
+    {
+        try
+        {
+            CaptureCurrentPage();
+            NavFrame.Content = null;
+            GC.Collect(GC.MaxGeneration, GCCollectionMode.Optimized, blocking: false);
+            TrimWorkingSet();
+        }
+        catch (Exception ex)
+        {
+            App.WriteLog($"释放页面内容失败：{ex}");
+        }
+    }
+
+    private static void TrimWorkingSet()
+    {
+        try
+        {
+            using var process = System.Diagnostics.Process.GetCurrentProcess();
+            _ = EmptyWorkingSet(process.Handle);
+        }
+        catch
+        {
+        }
+    }
+
+    [DllImport("psapi.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool EmptyWorkingSet(IntPtr hProcess);
+
+    private void RestorePageContent()
+    {
+        if (NavFrame.Content is not null || _lastPageType is null) return;
+        try
+        {
+            NavFrame.Navigate(_lastPageType);
+        }
+        catch (Exception ex)
+        {
+            App.WriteLog($"恢复页面内容失败：{ex}");
+            NavFrame.Navigate(typeof(HomePage));
         }
     }
 
@@ -240,10 +295,20 @@ public sealed partial class MainWindow : Window
 
     public void SetTrayMiniPanelEnabled(bool enabled) => _trayMiniPanelEnabled = enabled;
 
+    public void StartMinimizedToTray() => MinimizeToTray();
+
     private void ToggleMiniWindow()
     {
-        _miniWindow ??= new MiniWindow();
-        _miniWindow.ToggleVisible();
+        EnsureMiniWindow();
+        _miniWindow!.ToggleVisible();
+    }
+
+    private void EnsureMiniWindow()
+    {
+        if (_miniWindow is not null) return;
+        var mini = new MiniWindow();
+        mini.Dismissed += (_, _) => _miniWindow = null;
+        _miniWindow = mini;
     }
 
     public void ApplyMiniPanelTheme(string theme)
@@ -251,6 +316,7 @@ public sealed partial class MainWindow : Window
 
     public void ShowAndActivate()
     {
+        RestorePageContent();
         AppWindow.Show();
         SetForegroundWindow(WinRT.Interop.WindowNative.GetWindowHandle(this));
     }
@@ -323,18 +389,8 @@ public sealed partial class MainWindow : Window
         }
     }
 
-    private void TitleBar_PaneToggleRequested(TitleBar sender, object args)
-    {
-        NavView.IsPaneOpen = !NavView.IsPaneOpen;
-    }
-
     public void NavigateToLogs(string containerName)
         => NavFrame.Navigate(typeof(LogsPage), containerName);
-
-    private void TitleBar_BackRequested(TitleBar sender, object args)
-    {
-        NavFrame.GoBack();
-    }
 
     private void NavView_SelectionChanged(NavigationView sender, NavigationViewSelectionChangedEventArgs args)
     {

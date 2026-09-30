@@ -39,17 +39,45 @@ internal static class WindowChrome
 
     public static void PlaceBelowTaskbar(IntPtr hwnd)
     {
-        IntPtr taskbar = FindWindowW("Shell_TrayWnd", null);
+        IntPtr taskbar = FindTaskbarForWindow(hwnd);
         if (taskbar == IntPtr.Zero)
         {
             SetTopmost(hwnd);
             return;
         }
 
+        // 必须先在 topmost 组内，插入才会生效。
         SetTopmost(hwnd);
         _ = SetWindowPos(hwnd, taskbar, 0, 0, 0, 0,
             SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_NOSENDCHANGING);
     }
+
+    /// <summary>
+    /// 找到与窗口同一显示器的任务栏：主屏为 Shell_TrayWnd，副屏为 Shell_SecondaryTrayWnd。
+    /// </summary>
+    private static IntPtr FindTaskbarForWindow(IntPtr hwnd)
+    {
+        IntPtr monitor = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);
+
+        IntPtr primary = FindWindowW("Shell_TrayWnd", null);
+        if (primary != IntPtr.Zero && MonitorFromWindow(primary, MONITOR_DEFAULTTONEAREST) == monitor)
+            return primary;
+
+        IntPtr found = IntPtr.Zero;
+        EnumWindows((candidate, _) =>
+        {
+            var sb = new System.Text.StringBuilder(64);
+            GetClassNameW(candidate, sb, sb.Capacity);
+            if (sb.ToString() != "Shell_SecondaryTrayWnd") return true;
+            if (MonitorFromWindow(candidate, MONITOR_DEFAULTTONEAREST) != monitor) return true;
+            found = candidate;
+            return false;
+        }, IntPtr.Zero);
+
+        return found != IntPtr.Zero ? found : primary;
+    }
+
+    private delegate bool EnumWindowsProc(IntPtr hwnd, IntPtr lParam);
 
     public static void SetWindowAlpha(IntPtr hwnd, int alpha)
     {
@@ -179,4 +207,15 @@ internal static class WindowChrome
 
     [DllImport("user32.dll", CharSet = CharSet.Unicode)]
     private static extern IntPtr FindWindowW(string lpClassName, string? lpWindowName);
+
+    [DllImport("user32.dll")]
+    private static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    private static extern int GetClassNameW(IntPtr hWnd, System.Text.StringBuilder lpClassName, int nMaxCount);
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr MonitorFromWindow(IntPtr hwnd, uint dwFlags);
+
+    private const uint MONITOR_DEFAULTTONEAREST = 2;
 }

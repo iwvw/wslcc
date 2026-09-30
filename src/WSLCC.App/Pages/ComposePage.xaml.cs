@@ -23,6 +23,7 @@ public sealed partial class ComposePage : Page
         ViewModel = new ComposeViewModel(
             WslcHost.Default.Compose, WslcHost.Default.Settings, WslcHost.Default.Audit);
         DataContext = ViewModel;
+        IssueReporter.AttachTo(ErrorBar, L.Get("Feedback.Page.Compose"), () => ViewModel.ErrorMessage);
     }
 
     protected override void OnNavigatedTo(NavigationEventArgs e)
@@ -36,12 +37,6 @@ public sealed partial class ComposePage : Page
     private async void OpenComposeDir_Click(object sender, RoutedEventArgs e)
     {
         var dir = await ViewModel.GetComposeDirectoryAsync();
-        if (string.IsNullOrWhiteSpace(dir) || !Directory.Exists(dir))
-        {
-            dir = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "WSLCC", "compose");
-        }
         if (string.IsNullOrWhiteSpace(dir) || !Directory.Exists(dir))
         {
             await ShowInfoAsync(L.Get("ComposePage.NoComposeDir"));
@@ -232,6 +227,8 @@ public sealed partial class ComposePage : Page
         EditorBox.Document.SetText(TextSetOptions.None, content ?? string.Empty);
         MirrorBox.Visibility = showMirror ? Visibility.Visible : Visibility.Collapsed;
         ProjectNameBox.Visibility = showMirror ? Visibility.Visible : Visibility.Collapsed;
+        ForcePullBox.Visibility = showMirror ? Visibility.Visible : Visibility.Collapsed;
+        ForcePullBox.IsChecked = false;
         MirrorBox.Text = defaultMirror;
         ProjectNameBox.Text = string.Empty;
         EditorPrimaryBtn.Content = _editingProject is null
@@ -281,13 +278,14 @@ public sealed partial class ComposePage : Page
         {
             var mirror = string.IsNullOrWhiteSpace(MirrorBox.Text) ? null : MirrorBox.Text.Trim();
             var projectName = string.IsNullOrWhiteSpace(ProjectNameBox.Text) ? null : ProjectNameBox.Text.Trim();
+            var forcePull = ForcePullBox.IsChecked == true;
             var path = EditorPathText.Text;
             var hasPath = !string.IsNullOrEmpty(path)
                 && !string.Equals(path, noFilePlaceholder, StringComparison.Ordinal);
             HideEditor();
             await ShowProgressAsync(L.Get("ComposePage.DeployProgressTitle"), async progress =>
             {
-                var results = await ViewModel.DeployFromContentAsync(content, hasPath ? path : null, projectName, progress, mirror);
+                var results = await ViewModel.DeployFromContentAsync(content, hasPath ? path : null, projectName, progress, mirror, forcePull);
                 return string.Join(Environment.NewLine,
                     results.Select(r => L.GetFormat(
                         r.Success ? "ComposePage.DeployResultOk" : "ComposePage.DeployResultFail",
@@ -318,28 +316,29 @@ public sealed partial class ComposePage : Page
 
     private async Task ShowProgressAsync(string title, Func<IProgress<string>, Task<string>> run)
     {
-        var statusText = new TextBlock { Text = L.Get("ComposePage.ProgressRunning") };
+        var panel = new WSLCC.App.Controls.OperationProgressPanel(L.Get("ComposePage.ProgressRunning"));
         var dialog = new ContentDialog
         {
             Title = title,
-            Content = statusText,
+            Content = panel.Root,
             CloseButtonText = L.Get("ComposePage.DoneButton"),
             DefaultButton = ContentDialogButton.Close,
             XamlRoot = XamlRoot,
         };
         var showTask = dialog.ShowAsync();
-        var progress = new Progress<string>(line => statusText.Text = line);
+        var progress = panel.CreateSink();
         try
         {
-            statusText.Text = await run(progress);
+            var result = await run(progress);
+            panel.Complete(result);
         }
         catch (OperationCanceledException)
         {
-            statusText.Text = L.Get("ComposePage.Cancelled");
+            panel.Cancelled(L.Get("ComposePage.Cancelled"));
         }
         catch (Exception ex)
         {
-            statusText.Text = L.GetFormat("ComposePage.OperationFailed", ex.Message);
+            panel.Fail(L.GetFormat("ComposePage.OperationFailed", ex.Message));
         }
         await showTask;
     }

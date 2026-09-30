@@ -108,15 +108,42 @@ public sealed class WslcContainerService : IWslcContainerService
         AddValue(args, "--shm-size", options.ShmSize);
         AddValue(args, "--tmpfs", options.Tmpfs);
         AddValue(args, "--pull", options.PullPolicy);
+        AddValue(args, "--domainname", options.Domainname);
         AddValue(args, "--health-cmd", options.HealthCommand);
         AddValue(args, "--health-interval", options.HealthInterval);
         AddValue(args, "--health-timeout", options.HealthTimeout);
         AddValue(args, "--health-retries", options.HealthRetries);
         AddValue(args, "--health-start-period", options.HealthStartPeriod);
+        if (options.NoHealthcheck) args.Add("--no-healthcheck");
+        if (options.PublishAll) args.Add("-P");
         if (options.Gpus)
         {
             args.Add("--gpus");
             args.Add("all");
+        }
+        if (options.Mounts is { Count: > 0 })
+        {
+            foreach (var mount in options.Mounts)
+            {
+                args.Add("--mount");
+                args.Add(mount);
+            }
+        }
+        if (options.EnvFiles is { Count: > 0 })
+        {
+            foreach (var envFile in options.EnvFiles)
+            {
+                args.Add("--env-file");
+                args.Add(envFile);
+            }
+        }
+        if (options.NetworkAliases is { Count: > 0 })
+        {
+            foreach (var alias in options.NetworkAliases)
+            {
+                args.Add("--network-alias");
+                args.Add(alias);
+            }
         }
         if (options.Dns is { Count: > 0 })
         {
