@@ -4,6 +4,7 @@ using Microsoft.UI.Xaml.Data;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Navigation;
+using Microsoft.Windows.AppLifecycle;
 using WSLCC.Core.Services;
 using Windows.UI;
 
@@ -59,8 +60,17 @@ public partial class App : Application
 
     public static string CurrentTheme { get; private set; } = "default";
 
+    private const string SingleInstanceKey = "WSLCC.Main";
+
+    private static AppInstance? _primaryInstance;
+
     protected override async void OnLaunched(Microsoft.UI.Xaml.LaunchActivatedEventArgs args)
     {
+        if (!TryAcquireSingleInstance())
+        {
+            return;
+        }
+
         try
         {
             await WslcHost.Default.InitializeAsync();
@@ -77,6 +87,34 @@ public partial class App : Application
         _ = AutoCheckUpdateAsync();
         _ = MigrateLegacyComposeAsync();
         _ = ApplyStartMinimizedAsync();
+    }
+
+    private static bool TryAcquireSingleInstance()
+    {
+        try
+        {
+            var instance = AppInstance.FindOrRegisterForKey(SingleInstanceKey);
+            if (!instance.IsCurrent)
+            {
+                _ = instance.RedirectActivationToAsync(AppInstance.GetCurrent().GetActivatedEventArgs());
+                Environment.Exit(0);
+                return false;
+            }
+
+            _primaryInstance = instance;
+            instance.Activated += OnPrimaryInstanceActivated;
+            return true;
+        }
+        catch (Exception ex)
+        {
+            WriteLog($"单实例注册失败，按普通启动处理：{ex}");
+            return true;
+        }
+    }
+
+    private static void OnPrimaryInstanceActivated(object? sender, AppActivationArguments args)
+    {
+        Main?.DispatcherQueue.TryEnqueue(() => Main?.ShowAndActivate());
     }
 
     private async Task ApplyStartMinimizedAsync()

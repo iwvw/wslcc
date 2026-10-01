@@ -1,3 +1,4 @@
+using System.Reflection;
 using System.Runtime.InteropServices;
 using Microsoft.UI.Composition.SystemBackdrops;
 using Microsoft.UI.Windowing;
@@ -22,6 +23,7 @@ public sealed partial class MainWindow : Window
     {
         InitializeComponent();
         Title = L.Get("MainWindow.Title");
+        AppVersionText.Text = $"v{GetAppVersion()}";
 
         ExtendsContentIntoTitleBar = true;
         SetTitleBar(AppTitleBar);
@@ -66,6 +68,19 @@ public sealed partial class MainWindow : Window
         "light" => ElementTheme.Light,
         _ => ElementTheme.Default,
     };
+
+    private static string GetAppVersion()
+    {
+        try
+        {
+            var version = Assembly.GetExecutingAssembly().GetName().Version;
+            return version is null ? "-" : $"{version.Major}.{version.Minor}.{version.Build}";
+        }
+        catch
+        {
+            return "-";
+        }
+    }
 
     private void OnAppWindowClosing(AppWindow sender, AppWindowClosingEventArgs args)
     {
