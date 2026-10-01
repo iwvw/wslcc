@@ -54,6 +54,7 @@ public partial class App : Application
             };
         }
         window?.ApplyMiniPanelTheme(theme);
+        window?.ApplyTrayTheme(theme);
     }
 
     public static string CurrentTheme { get; private set; } = "default";

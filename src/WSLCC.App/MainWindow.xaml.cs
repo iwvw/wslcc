@@ -1,4 +1,3 @@
-using System.Drawing;
 using System.Runtime.InteropServices;
 using Microsoft.UI.Composition.SystemBackdrops;
 using Microsoft.UI.Windowing;
@@ -7,14 +6,14 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using WSLCC.App.Mini;
 using WSLCC.App.Pages;
+using WSLCC.App.Services;
 using WSLCC.Core.Services;
-using Forms = System.Windows.Forms;
 
 namespace WSLCC_App;
 
 public sealed partial class MainWindow : Window
 {
-    private Forms.NotifyIcon? _notifyIcon;
+    private readonly TrayIconService _tray = new();
     private MiniWindow? _miniWindow;
     private bool _trayMiniPanelEnabled = true;
     private bool _forceExit;
@@ -47,100 +46,32 @@ public sealed partial class MainWindow : Window
     {
         try
         {
-            _notifyIcon = new Forms.NotifyIcon
-            {
-                Icon = new System.Drawing.Icon(Path.Combine(AppContext.BaseDirectory, "Assets", "AppIcon.ico")),
-                Text = L.Get("MainWindow.TrayTooltip"),
-                Visible = true,
-            };
-            _notifyIcon.MouseDown += (_, e) =>
-            {
-                if (e.Button == Forms.MouseButtons.Left)
-                    OnTrayLeftClick();
-            };
-
-            var menu = new Forms.ContextMenuStrip();
-            menu.Opening += (_, _) => ApplyMenuTheme(menu);
-            menu.Items.Add(L.Get("MainWindow.TrayOpen"), null, (_, _) => ShowMainWindow());
-            menu.Items.Add(L.Get("MainWindow.TrayMiniPanel"), null, (_, _) => ToggleMiniWindow());
-            menu.Items.Add(new Forms.ToolStripSeparator());
-            menu.Items.Add(L.Get("MainWindow.TrayExit"), null, (_, _) => ExitFromTray());
-            _notifyIcon.ContextMenuStrip = menu;
+            _tray.LeftClickRequested += OnTrayLeftClick;
+            _tray.OpenRequested += ShowMainWindow;
+            _tray.MiniPanelRequested += ToggleMiniWindow;
+            _tray.SettingsRequested += ShowSettings;
+            _tray.ExitRequested += ExitFromTray;
+            _tray.ApplyTheme(ToElementTheme(App.CurrentTheme));
+            _tray.Show(true);
         }
-        catch
+        catch (Exception ex)
         {
-            _notifyIcon = null;
+            App.WriteLog($"创建托盘图标失败：{ex}");
         }
     }
 
-    private void ApplyMenuTheme(Forms.ContextMenuStrip menu)
+    internal static ElementTheme ToElementTheme(string theme) => theme switch
     {
-        var dark = IsAppDark();
-        menu.Renderer = dark
-            ? new Forms.ToolStripProfessionalRenderer(new DarkColorTable())
-            : new Forms.ToolStripProfessionalRenderer();
-        var textColor = dark ? Color.White : Color.Black;
-        menu.ForeColor = textColor;
-        foreach (Forms.ToolStripItem item in menu.Items)
-            item.ForeColor = textColor;
-    }
-
-    private static bool IsAppDark()
-    {
-        if (Application.Current.RequestedTheme == ApplicationTheme.Dark) return true;
-        if (Application.Current.RequestedTheme == ApplicationTheme.Light) return false;
-        return IsSystemDark();
-    }
-
-    private static bool IsSystemDark()
-    {
-        try
-        {
-            using var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(
-                @"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize");
-            return key?.GetValue("AppsUseLightTheme") is int value && value == 0;
-        }
-        catch
-        {
-            return false;
-        }
-    }
-
-    private sealed class DarkColorTable : Forms.ProfessionalColorTable
-    {
-        private static readonly Color Bg = Color.FromArgb(0x2B, 0x2B, 0x2B);
-        private static readonly Color HoverBg = Color.FromArgb(0x41, 0x41, 0x41);
-        private static readonly Color HoverBorder = Color.FromArgb(0x55, 0x55, 0x55);
-
-        public override Color ToolStripDropDownBackground => Bg;
-        public override Color ToolStripGradientBegin => Bg;
-        public override Color ToolStripGradientMiddle => Bg;
-        public override Color ToolStripGradientEnd => Bg;
-        public override Color ImageMarginGradientBegin => Bg;
-        public override Color ImageMarginGradientMiddle => Bg;
-        public override Color ImageMarginGradientEnd => Bg;
-        public override Color MenuBorder => HoverBorder;
-        public override Color MenuItemBorder => HoverBorder;
-        public override Color MenuItemSelected => HoverBg;
-        public override Color MenuItemSelectedGradientBegin => HoverBg;
-        public override Color MenuItemSelectedGradientEnd => HoverBg;
-        public override Color MenuItemPressedGradientBegin => HoverBg;
-        public override Color MenuItemPressedGradientMiddle => HoverBg;
-        public override Color MenuItemPressedGradientEnd => HoverBg;
-        public override Color SeparatorDark => HoverBorder;
-        public override Color SeparatorLight => Bg;
-        public override Color ButtonSelectedHighlight => HoverBg;
-        public override Color ButtonSelectedHighlightBorder => HoverBorder;
-        public override Color ButtonSelectedBorder => HoverBorder;
-        public override Color ToolStripBorder => HoverBorder;
-    }
+        "dark" => ElementTheme.Dark,
+        "light" => ElementTheme.Light,
+        _ => ElementTheme.Default,
+    };
 
     private void OnAppWindowClosing(AppWindow sender, AppWindowClosingEventArgs args)
     {
         if (_forceExit)
         {
-            _notifyIcon?.Dispose();
-            _notifyIcon = null;
+            _tray.Dispose();
             return;
         }
 
@@ -216,7 +147,7 @@ public sealed partial class MainWindow : Window
         {
             var notifyEnabled = WslcHost.Default.Settings.GetMinimizeNotifyEnabledAsync().GetAwaiter().GetResult();
             if (notifyEnabled)
-                _notifyIcon?.ShowBalloonTip(1500, "WSLCC", L.Get("MainWindow.MinimizedBalloon"), Forms.ToolTipIcon.Info);
+                _tray.ShowBalloon("WSLCC", L.Get("MainWindow.MinimizedBalloon"));
         }
         catch
         {
@@ -342,6 +273,15 @@ public sealed partial class MainWindow : Window
 
     private void ShowMainWindow() => ShowAndActivate();
 
+    private void ShowSettings()
+    {
+        RestorePageContent();
+        NavFrame.Navigate(typeof(SettingsPage));
+        ShowAndActivate();
+    }
+
+    public void ApplyTrayTheme(string theme) => _tray.ApplyTheme(ToElementTheme(theme));
+
     [DllImport("user32.dll")]
     private static extern bool SetForegroundWindow(IntPtr hWnd);
 
@@ -349,8 +289,7 @@ public sealed partial class MainWindow : Window
     {
         _forceExit = true;
         CloseMiniWindow();
-        _notifyIcon?.Dispose();
-        _notifyIcon = null;
+        _tray.Dispose();
         Close();
     }
 
@@ -358,8 +297,7 @@ public sealed partial class MainWindow : Window
     {
         _forceExit = true;
         CloseMiniWindow();
-        _notifyIcon?.Dispose();
-        _notifyIcon = null;
+        _tray.Dispose();
         Close();
     }
 

@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:tb="using:H.NotifyIcon">
+
+    <tb:TaskbarIcon
+        x:Key="WslccTrayIcon"
+        IconSource="ms-appx:///Assets/AppIcon.ico"
+        NoLeftClickDelay="True"
+        ToolTipText="WSLCC"
+        Visibility="Collapsed">
+        <tb:TaskbarIcon.ContextFlyout>
+            <MenuFlyout AreOpenCloseAnimationsEnabled="False">
+                <MenuFlyoutItem FontSize="13" Text="Open">
+                    <MenuFlyoutItem.Icon>
+                        <FontIcon FontSize="14" Glyph="&#xE8A7;" />
+                    </MenuFlyoutItem.Icon>
+                </MenuFlyoutItem>
+                <MenuFlyoutItem FontSize="13" Text="MiniPanel">
+                    <MenuFlyoutItem.Icon>
+                        <FontIcon FontSize="14" Glyph="&#xE7C4;" />
+                    </MenuFlyoutItem.Icon>
+                </MenuFlyoutItem>
+                <MenuFlyoutSeparator />
+                <MenuFlyoutItem FontSize="13" Text="Settings">
+                    <MenuFlyoutItem.Icon>
+                        <FontIcon FontSize="14" Glyph="&#xE713;" />
+                    </MenuFlyoutItem.Icon>
+                </MenuFlyoutItem>
+                <MenuFlyoutSeparator />
+                <MenuFlyoutItem FontSize="13" Text="Exit">
+                    <MenuFlyoutItem.Icon>
+                        <FontIcon FontSize="14" Glyph="&#xE7E8;" />
+                    </MenuFlyoutItem.Icon>
+                </MenuFlyoutItem>
+            </MenuFlyout>
+        </tb:TaskbarIcon.ContextFlyout>
+    </tb:TaskbarIcon>
+</ResourceDictionary>
