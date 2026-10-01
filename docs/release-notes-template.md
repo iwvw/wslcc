@@ -33,8 +33,8 @@
 
 ## 安装
 
-- 安装包：WSLCC-Setup.exe
-- 便携版：WSLCC-win-x64.zip
+- 合并版（自包含，开箱即用）：WSLCC-Setup.exe / WSLCC-win-x64.zip
+- 分离版（框架依赖，体积小，需 .NET 10 桌面运行时与 Windows App Runtime 2.4）：WSLCC-Setup-framework.exe / WSLCC-win-x64-framework.zip
 
 ## 完整改动
 
@@ -58,8 +58,8 @@
 
 ## 安装
 
-- 安装包：WSLCC-Setup.exe
-- 便携版：WSLCC-win-x64.zip
+- 合并版（自包含）：WSLCC-Setup.exe / WSLCC-win-x64.zip
+- 分离版（框架依赖）：WSLCC-Setup-framework.exe / WSLCC-win-x64-framework.zip
 ```
 
 ---
@@ -67,6 +67,7 @@
 ## 使用约定
 
 - 标题只写版本号，如 `v1.7.2`，不加前缀或后缀。
-- 版本号与 git tag 一致，产物命名沿用 `WSLCC-Setup.exe`、`WSLCC-win-x64.zip`。
+- 版本号与 git tag 一致。
+- 产物命名：合并版 `WSLCC-Setup.exe` / `WSLCC-win-x64.zip`；分离版 `WSLCC-Setup-framework.exe` / `WSLCC-win-x64-framework.zip`。
 - 小版本内容少时，可省略「安装」之外的空节，只保留实际有内容的节。
 - 对比链接仅正式发布版保留；小版本可省略。

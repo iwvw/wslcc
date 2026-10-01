@@ -23,6 +23,8 @@ public sealed class WslcUpdateService : IWslcUpdateService
 {
     private const string ReleasesApi = "https://api.github.com/repos/iwvw/wslcc/releases/latest";
 
+    public static string InstallerAssetName { get; set; } = "WSLCC-Setup.exe";
+
     public static UpdateInfo? LastResult { get; private set; }
 
     public async Task<UpdateInfo> CheckAsync(CancellationToken ct = default)
@@ -40,12 +42,13 @@ public sealed class WslcUpdateService : IWslcUpdateService
             var latest = tag?.TrimStart('v');
 
             var downloadUrl = default(string);
+            var assetName = InstallerAssetName;
             if (root.TryGetProperty("assets", out var assets))
             {
                 foreach (var asset in assets.EnumerateArray())
                 {
                     if (!asset.TryGetProperty("name", out var name)) continue;
-                    if (!name.GetString()?.Contains("WSLCC-Setup", StringComparison.OrdinalIgnoreCase) ?? true) continue;
+                    if (!string.Equals(name.GetString(), assetName, StringComparison.OrdinalIgnoreCase)) continue;
                     if (asset.TryGetProperty("browser_download_url", out var bdu))
                         downloadUrl = bdu.GetString();
                     break;
@@ -77,7 +80,7 @@ public sealed class WslcUpdateService : IWslcUpdateService
             return info with { Error = "无法获取更新信息：" + info.Error };
 
         if (string.IsNullOrEmpty(info.DownloadUrl) && string.IsNullOrEmpty(downloadUrl))
-            return info with { Error = "发布中未找到安装包（WSLCC-Setup.exe）" };
+            return info with { Error = $"发布中未找到安装包（{InstallerAssetName}）" };
 
         var url = !string.IsNullOrEmpty(downloadUrl) ? downloadUrl : info.DownloadUrl;
         var dest = Path.Combine(

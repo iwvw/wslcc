@@ -16,3 +16,4 @@
 | 0010 | 迷你容器面板（右下角托盘浮层） | Accepted |
 | 0011 | 跟进官方 wslc 2.9.13 能力（digests / all-tags / follow-link / events） | Accepted |
 | 0012 | 跟进官方 WSL 3.0.1（wslc 正式 GA） | Accepted |
+| 0013 | 发行版提供合并版（自包含）与分离版（框架依赖）两种模式 | Accepted |

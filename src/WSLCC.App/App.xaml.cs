@@ -23,6 +23,11 @@ public partial class App : Application
     public App()
     {
         InitializeComponent();
+#if WSLCC_FRAMEWORK_DEPENDENT
+        WslcUpdateService.InstallerAssetName = "WSLCC-Setup-framework.exe";
+#else
+        WslcUpdateService.InstallerAssetName = "WSLCC-Setup.exe";
+#endif
         UnhandledException += (_, e) => WriteLog($"UnhandledException: {e.Exception}");
         AppDomain.CurrentDomain.UnhandledException += (_, e) => WriteLog($"AppDomain: {e.ExceptionObject}");
         TaskScheduler.UnobservedTaskException += (_, e) => WriteLog($"UnobservedTask: {e.Exception}");

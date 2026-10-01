@@ -26,6 +26,7 @@
 - Windows 10/11（x64）
 - [WSL 容器（wslc）](https://github.com/MicrosoftDocs/wsl/blob/main/WSL/wsl-container.md)（微软官方 WSL 容器 CLI，现已正式发布，需 `wsl --update`）
 - .NET 10 SDK（开发构建）
+- 分离版额外需要：.NET 10 桌面运行时 与 Windows App Runtime 2.4（合并版无需）
 
 ## 构建
 
@@ -37,13 +38,27 @@ powershell -ExecutionPolicy Bypass -File build.ps1
 
 ## 打包发布
 
+提供两种发布模式：
+
+- **合并版（自包含）**：内置 .NET 运行时，开箱即用，体积较大。
+- **分离版（框架依赖）**：不含运行时，体积小，需系统已安装 .NET 10 桌面运行时与 Windows App Runtime 2.4。
+
 ```powershell
+# 合并版（默认）
 powershell -ExecutionPolicy Bypass -File publish.ps1
+
+# 分离版（框架依赖）
+powershell -ExecutionPolicy Bypass -File publish.ps1 -Framework
 ```
 
-产物为自包含单目录 `dist\WSLCC-<版本>-win-x64.zip`，解压即可运行，无需安装运行时。
+产物为自包含/框架依赖单目录 zip，解压即可运行。加 `-InnoSetup` 可一并生成对应安装器。
 
-推送 `v*` 标签会触发 GitHub Actions 自动构建并创建 Release，产物包括 `WSLCC-win-x64.zip` 与 `WSLCC-Setup.exe` 安装器。应用内置自更新流程，检测到新版本后下载 zip 并自动完成替换升级。
+推送 `v*` 标签会触发 GitHub Actions 自动构建并创建 Release，产物包括：
+
+- 合并版：`WSLCC-win-x64.zip`、`WSLCC-Setup.exe`
+- 分离版：`WSLCC-win-x64-framework.zip`、`WSLCC-Setup-framework.exe`
+
+应用内置自更新流程，检测到新版本后按当前安装模式下载对应安装包并自动完成替换升级。
 
 ## 贡献者
 

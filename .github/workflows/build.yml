@@ -37,56 +37,76 @@ jobs:
       - name: Restore & Build
         run: dotnet build src/WSLCC.App/WSLCC.App.csproj -c Release -p:Platform=x64 -p:Version=${{ steps.version.outputs.ver }} -v:m
 
-      - name: Publish (self-contained)
-        run: dotnet publish src/WSLCC.App/WSLCC.App.csproj -c Release -r win-x64 --self-contained true -p:Platform=x64 -p:Version=${{ steps.version.outputs.ver }} -p:PublishTrimmed=false -p:PublishReadyToRun=false -o artifacts/publish -v:m
+      - name: Publish (self-contained / merged)
+        run: dotnet publish src/WSLCC.App/WSLCC.App.csproj -c Release -r win-x64 --self-contained true -p:Platform=x64 -p:Version=${{ steps.version.outputs.ver }} -p:WSLCCFrameworkDependent=false -p:PublishTrimmed=false -p:PublishReadyToRun=false -o artifacts/publish -v:m
 
-      - name: Package zip
+      - name: Publish (framework-dependent / separate)
+        run: dotnet publish src/WSLCC.App/WSLCC.App.csproj -c Release -r win-x64 --self-contained false -p:Platform=x64 -p:Version=${{ steps.version.outputs.ver }} -p:WSLCCFrameworkDependent=true -p:PublishTrimmed=false -p:PublishReadyToRun=false -o artifacts/publish-framework -v:m
+
+      - name: Trim language resources
         shell: powershell
         run: |
-          $publish = "artifacts/publish"
-          # 裁剪多余语言资源目录（仅保留中英文）
           $keep = @("en-us", "en-US", "en-GB", "zh-CN", "zh-Hans", "zh-Hant", "zh-TW")
-          Get-ChildItem "$publish" -Directory | Where-Object {
-              $_.Name -match "^[a-z]{2,3}(-[A-Za-z]{2,8}){0,2}$" -and $_.Name -notin $keep
-          } | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
-          Compress-Archive -Path "$publish/*" -DestinationPath artifacts/WSLCC-win-x64.zip -Force
+          foreach ($publish in @("artifacts/publish", "artifacts/publish-framework")) {
+            Get-ChildItem "$publish" -Directory | Where-Object {
+                $_.Name -match "^[a-z]{2,3}(-[A-Za-z]{2,8}){0,2}$" -and $_.Name -notin $keep
+            } | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+          }
 
-      - name: Upload zip
+      - name: Package zips
+        shell: powershell
+        run: |
+          Compress-Archive -Path "artifacts/publish/*" -DestinationPath artifacts/WSLCC-win-x64.zip -Force
+          Compress-Archive -Path "artifacts/publish-framework/*" -DestinationPath artifacts/WSLCC-win-x64-framework.zip -Force
+
+      - name: Upload zips
         uses: actions/upload-artifact@v4
         with:
-          name: wslcc-win-x64-zip
-          path: artifacts/WSLCC-win-x64.zip
+          name: wslcc-zips
+          path: |
+            artifacts/WSLCC-win-x64.zip
+            artifacts/WSLCC-win-x64-framework.zip
           if-no-files-found: error
 
-      - name: Upload publish dir
+      - name: Upload publish dirs
         uses: actions/upload-artifact@v4
         with:
-          name: wslcc-win-x64-publish
-          path: artifacts/publish
+          name: wslcc-publish
+          path: |
+            artifacts/publish
+            artifacts/publish-framework
           if-no-files-found: error
 
-      - name: Create installer
+      - name: Create installers
         shell: powershell
         run: |
           choco install innosetup -y --no-progress
           $iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
           if (-not (Test-Path $iscc)) { $iscc = "C:\Program Files\Inno Setup 6\ISCC.exe" }
-          & $iscc "/DSourceDir=$PWD\artifacts\publish" "/DAppVersion=${{ steps.version.outputs.ver }}" "/DOutputDir=$PWD\artifacts" scripts\installer.iss
-          if ($LASTEXITCODE -ne 0) { throw "installer build failed" }
+          & $iscc "/DSourceDir=$PWD\artifacts\publish" "/DAppVersion=${{ steps.version.outputs.ver }}" "/DOutputDir=$PWD\artifacts" "/DOutputSuffix=" "/DFrameworkDependent=false" scripts\installer.iss
+          if ($LASTEXITCODE -ne 0) { throw "merged installer build failed" }
+          & $iscc "/DSourceDir=$PWD\artifacts\publish-framework" "/DAppVersion=${{ steps.version.outputs.ver }}" "/DOutputDir=$PWD\artifacts" "/DOutputSuffix=-framework" "/DFrameworkDependent=true" scripts\installer.iss
+          if ($LASTEXITCODE -ne 0) { throw "framework installer build failed" }
 
-      - name: Locate installer
+      - name: Locate installers
         shell: powershell
         run: |
-          $setup = Get-ChildItem artifacts\WSLCC-Setup-*.exe | Select-Object -First 1
-          if (-not $setup) { throw "no installer produced" }
-          Copy-Item $setup.FullName artifacts\WSLCC-Setup.exe -Force
-          Write-Output "installer: $($setup.FullName)"
+          $merged = Get-ChildItem "artifacts\WSLCC-Setup-${{ steps.version.outputs.ver }}.exe" | Select-Object -First 1
+          $framework = Get-ChildItem "artifacts\WSLCC-Setup-${{ steps.version.outputs.ver }}-framework.exe" | Select-Object -First 1
+          if (-not $merged) { throw "no merged installer produced" }
+          if (-not $framework) { throw "no framework installer produced" }
+          Copy-Item $merged.FullName artifacts\WSLCC-Setup.exe -Force
+          Copy-Item $framework.FullName artifacts\WSLCC-Setup-framework.exe -Force
+          Write-Output "merged: $($merged.FullName)"
+          Write-Output "framework: $($framework.FullName)"
 
-      - name: Upload installer
+      - name: Upload installers
         uses: actions/upload-artifact@v4
         with:
-          name: wslcc-setup
-          path: artifacts/WSLCC-Setup.exe
+          name: wslcc-installers
+          path: |
+            artifacts/WSLCC-Setup.exe
+            artifacts/WSLCC-Setup-framework.exe
           if-no-files-found: error
 
       - name: Create GitHub Release
@@ -95,4 +115,6 @@ jobs:
         with:
           files: |
             artifacts/WSLCC-win-x64.zip
+            artifacts/WSLCC-win-x64-framework.zip
             artifacts/WSLCC-Setup.exe
+            artifacts/WSLCC-Setup-framework.exe

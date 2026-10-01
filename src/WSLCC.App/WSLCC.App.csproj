@@ -2,7 +2,7 @@
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <AssemblyName>WSLCC</AssemblyName>
-    <Version>1.7.2</Version>
+    <Version>1.8.0</Version>
     <ApplicationIcon>Assets\AppIcon.ico</ApplicationIcon>
     <TargetFramework>net10.0-windows10.0.26100.0</TargetFramework>
     <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
@@ -14,12 +14,18 @@
     <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == ''">win-$([System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture.ToString().ToLowerInvariant())</RuntimeIdentifier>
     <PublishProfile Condition="Exists('Properties\PublishProfiles\win-$(Platform).pubxml')">win-$(Platform).pubxml</PublishProfile>
     <UseWinUI>true</UseWinUI>
-    <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+    <WSLCCFrameworkDependent Condition="'$(WSLCCFrameworkDependent)' == ''">false</WSLCCFrameworkDependent>
+    <WindowsAppSDKSelfContained Condition="'$(WSLCCFrameworkDependent)' != 'true'">true</WindowsAppSDKSelfContained>
+    <WindowsAppSDKSelfContained Condition="'$(WSLCCFrameworkDependent)' == 'true'">false</WindowsAppSDKSelfContained>
     <WindowsPackageType>None</WindowsPackageType>
     <WinUISDKReferences>false</WinUISDKReferences>
     <EnableMsixTooling>true</EnableMsixTooling>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(WSLCCFrameworkDependent)' == 'true'">
+    <DefineConstants>$(DefineConstants);WSLCC_FRAMEWORK_DEPENDENT</DefineConstants>
   </PropertyGroup>
 
   <ItemGroup>

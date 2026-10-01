@@ -1,9 +1,15 @@
-# WSLC 发布脚本：单目录自包含产物 + zip 分发包
+# WSLC 发布脚本：单目录产物 + zip 分发包
+# 两种发布模式：
+#   - 合并版（自包含，默认）：内置 .NET 运行时，开箱即用。产物 WSLCC-<版本>-win-x64.zip / WSLCC-Setup.exe
+#   - 分离版（框架依赖）：不含运行时，需系统已安装 .NET 10 桌面运行时与 Windows App Runtime。
+#     产物 WSLCC-<版本>-win-x64-framework.zip / WSLCC-Setup-framework.exe
+# 用法：.\publish.ps1 [-Configuration Release] [-Runtime win-x64] [-Framework] [-InnoSetup]
 param(
     [ValidateSet("Debug", "Release")]
     [string]$Configuration = "Release",
     [ValidateSet("win-x64", "win-arm64")]
     [string]$Runtime = "win-x64",
+    [switch]$Framework,
     [switch]$InnoSetup
 )
 
@@ -13,14 +19,20 @@ $project = Join-Path $PSScriptRoot "src\WSLCC.App\WSLCC.App.csproj"
 $publishDir = Join-Path $PSScriptRoot "dist\publish"
 $exe = Join-Path $publishDir "WSLCC.exe"
 
+$selfContained = -not $Framework
+$suffix = if ($Framework) { "-framework" } else { "" }
+$mode = if ($Framework) { "框架依赖（分离版）" } else { "自包含（合并版）" }
+
 # Microsoft.WSL.Containers 只随 microsoft/WSL 的 GitHub Release 发布，需先取到本地源
 & (Join-Path $PSScriptRoot "scripts\fetch-wslc-sdk.ps1")
 
 if (Test-Path $publishDir) { Remove-Item $publishDir -Recurse -Force }
 New-Item -ItemType Directory -Path $publishDir -Force | Out-Null
 
-Write-Host "==> dotnet publish ($Configuration|$Runtime, self-contained)"
-dotnet publish $project -c $Configuration -r $Runtime --self-contained true -p:Platform=x64 -p:PublishTrimmed=false -p:PublishReadyToRun=false -o $publishDir -v:m
+Write-Host "==> dotnet publish ($Configuration|$Runtime, $mode)"
+dotnet publish $project -c $Configuration -r $Runtime --self-contained $selfContained `
+    -p:Platform=x64 -p:WSLCCFrameworkDependent=$($Framework.ToString().ToLowerInvariant()) `
+    -p:PublishTrimmed=false -p:PublishReadyToRun=false -o $publishDir -v:m
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 # 裁剪多余语言资源目录（仅保留中英文）
@@ -37,7 +49,7 @@ try {
     if ($info.ProductVersion) { $version = $info.ProductVersion.Split('+')[0] }
 } catch { }
 
-$zip = Join-Path $PSScriptRoot "dist\WSLCC-$version-$Runtime.zip"
+$zip = Join-Path $PSScriptRoot "dist\WSLCC-$version-$Runtime$suffix.zip"
 if (Test-Path $zip) { Remove-Item $zip -Force }
 Compress-Archive -Path "$publishDir\*" -DestinationPath $zip -Force
 Write-Host "发布完成：$zip" -ForegroundColor Green
@@ -52,6 +64,6 @@ if ($InnoSetup) {
     $iss = Join-Path $PSScriptRoot "scripts\installer.iss"
     $dist = Join-Path $PSScriptRoot "dist"
     Write-Host "==> Inno Setup 安装器"
-    & $iscc "/DSourceDir=$publishDir" "/DAppVersion=$version" "/DOutputDir=$dist" $iss
+    & $iscc "/DSourceDir=$publishDir" "/DAppVersion=$version" "/DOutputDir=$dist" "/DOutputSuffix=$suffix" "/DFrameworkDependent=$($Framework.ToString().ToLowerInvariant())" $iss
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 }
