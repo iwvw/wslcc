@@ -220,6 +220,14 @@ public partial class HomeViewModel : ObservableObject
 
         GuidanceSteps.Add(L.Get("Home.GuidanceStartSession"));
 
+        var reparse = text.Contains("800701c0", StringComparison.OrdinalIgnoreCase)
+            || text.Contains("不受信任的装入点", StringComparison.OrdinalIgnoreCase)
+            || text.Contains("untrusted mount point", StringComparison.OrdinalIgnoreCase);
+        if (reparse || WslcPathDiagnostics.DetectUntrustedReparsePoints(WslcPathDiagnostics.SettingsDirectory).Count > 0)
+        {
+            GuidanceSteps.Add(L.Get("Home.GuidanceReparse"));
+        }
+
         if (networkIssue)
         {
             GuidanceSteps.Add(L.Get("Home.GuidanceNetwork"));

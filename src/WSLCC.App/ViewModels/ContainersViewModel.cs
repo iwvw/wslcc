@@ -38,6 +38,12 @@ public partial class ContainersViewModel : ObservableObject
     public partial bool HasNetworkWarning { get; set; }
 
     [ObservableProperty]
+    public partial string ReparseWarningText { get; set; }
+
+    [ObservableProperty]
+    public partial bool HasReparseWarning { get; set; }
+
+    [ObservableProperty]
     public partial ContainerItemViewModel? SelectedContainer { get; set; }
 
     public ContainersViewModel(
@@ -58,6 +64,7 @@ public partial class ContainersViewModel : ObservableObject
     public void StopAutoRefresh() => _statsTimer.Stop();
 
     private CancellationTokenSource? _operationCts;
+    private string? _lastStatsError;
 
     private CancellationToken BeginOperation()
     {
@@ -82,6 +89,7 @@ public partial class ContainersViewModel : ObservableObject
         try
         {
             var stats = await _containers.GetStatsAsync();
+            _lastStatsError = null;
             foreach (var item in Containers)
             {
                 stats.TryGetValue(item.Source.Name, out var stat);
@@ -90,7 +98,10 @@ public partial class ContainersViewModel : ObservableObject
         }
         catch (Exception ex)
         {
+            if (ex.Message == _lastStatsError) return;
+            _lastStatsError = ex.Message;
             global::WSLCC_App.App.WriteLog($"容器统计刷新失败：{ex}");
+            CheckReparseWarning(ex.Message);
         }
     }
 
@@ -290,6 +301,30 @@ public partial class ContainersViewModel : ObservableObject
         ErrorMessage = ex.Message;
         HasError = true;
         CheckNetworkWarning(ex.Message);
+        CheckReparseWarning(ex.Message);
+    }
+
+    private void CheckReparseWarning(string message)
+    {
+        var text = message ?? "";
+        var reparse = text.Contains("800701c0", StringComparison.OrdinalIgnoreCase)
+            || text.Contains("不受信任的装入点", StringComparison.OrdinalIgnoreCase)
+            || text.Contains("untrusted mount point", StringComparison.OrdinalIgnoreCase);
+        var paths = reparse
+            ? WslcPathDiagnostics.DetectUntrustedReparsePoints(
+                WslcPathDiagnostics.SettingsDirectory,
+                WslcHost.DefaultStoragePath)
+            : [];
+        if (!reparse && paths.Count == 0)
+        {
+            HasReparseWarning = false;
+            return;
+        }
+        HasReparseWarning = true;
+        ReparseWarningText = paths.Count > 0
+            ? L.GetFormat("ContainersPage.ReparseWarningWithPaths",
+                string.Join(L.Get("ContainersPage.ListSeparator"), paths))
+            : L.Get("ContainersPage.ReparseWarning");
     }
 
     private async Task ResolveIconsAsync()

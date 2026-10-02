@@ -17,3 +17,4 @@
 | 0011 | 跟进官方 wslc 2.9.13 能力（digests / all-tags / follow-link / events） | Accepted |
 | 0012 | 跟进官方 WSL 3.0.1（wslc 正式 GA） | Accepted |
 | 0013 | 发行版提供合并版（自包含）与分离版（框架依赖）两种模式 | Accepted |
+| 0014 | 识别并提示 wslc 数据目录为重解析点导致的 0x800701c0 | Accepted |

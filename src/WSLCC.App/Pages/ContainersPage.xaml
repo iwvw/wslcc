@@ -61,6 +61,13 @@
                 Message="{x:Bind ViewModel.NetworkWarningText, Mode=OneWay}"
                 Severity="Warning"
                 Title="网络环境警告" />
+
+            <InfoBar
+                IsClosable="True"
+                IsOpen="{x:Bind ViewModel.HasReparseWarning, Mode=OneWay}"
+                Message="{x:Bind ViewModel.ReparseWarningText, Mode=OneWay}"
+                Severity="Warning"
+                Title="路径策略警告" />
         </StackPanel>
 
 <Grid Grid.Row="2">
